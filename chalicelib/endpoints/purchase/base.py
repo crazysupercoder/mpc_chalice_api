@@ -1,0 +1,33 @@
+from chalice import Blueprint
+from .cart import register_cart
+from .customer.delivery_address import register_customer_delivery_addresses
+from .customer.orders import register_customer_orders
+from .customer.cancellations import register_customer_cancellations
+from .customer.returns import register_customer_returns
+from .customer.credit import register_customer_credit
+from .checkout import register_checkout
+from .tiers import register_tiers
+from .payment_methods.regular_eft import register_payment_methods_regular_eft
+from .payment_methods.customer_credits import register_payment_methods_customer_credits
+from .payment_methods.peach.webhooks import register_payment_methods_peach_weebhoks
+from .payment_methods.peach.mobicred import register_payment_methods_peach_mobicred
+from .payment_methods.peach.cards import register_payment_methods_peach_cards
+
+blueprint = Blueprint(__name__)
+
+register_cart(blueprint)
+register_checkout(blueprint)
+register_tiers(blueprint)
+
+register_payment_methods_regular_eft(blueprint)
+register_payment_methods_customer_credits(blueprint)
+register_payment_methods_peach_weebhoks(blueprint)
+register_payment_methods_peach_mobicred(blueprint)
+register_payment_methods_peach_cards(blueprint)
+
+register_customer_delivery_addresses(blueprint)
+register_customer_orders(blueprint)
+register_customer_cancellations(blueprint)
+register_customer_returns(blueprint)
+register_customer_credit(blueprint)
+

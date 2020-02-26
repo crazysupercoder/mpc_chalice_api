@@ -1,0 +1,186 @@
+{
+  "version": "2.0",
+  "app_name": "mpc_chalice_api",
+  "stages": {
+
+    "production": {
+      "api_gateway_stage": "api",
+      "lambda_functions": {
+        "handle_sqs_message": {
+          "lambda_timeout": 30
+        }
+      },
+      "environment_variables": {
+        "STAGE": "production",
+        "FRONTEND_BASE_URL": "https://fixel.co.za",
+        "AWS_ACCOUNT_ID": "254084358738",
+        "PORTAL_AWS_ACCOUNT_ID": "515080201846",
+        "FILE_STORAGE_CONFIG": "{\"class\": \"chalicelib.libs.core.file_storage._AwsS3FileStorage\", \"params\": {\"bucket\": \"mpc-uploads-prod\", \"root_url\": \"https://mpc-uploads-prod.s3-eu-west-1.amazonaws.com/\"}}",
+
+        "AWS_ELASTICSEARCH_HOST": "search-mpc-bkkzponhg2tf3hkwpbru2dfao4.eu-west-1.es.amazonaws.com",
+
+        "SQS_PORTAL_MPC_COMMON":  "portal-mpc-common",
+        "SQS_PORTAL_MPC_CUSTOMER_INFO_UPDATE":  "portal-mpc-customer_info_update",
+        "SQS_PORTAL_MPC_ORDER":  "portal-mpc-order.fifo",
+        "SQS_MPC_PORTAL_COMMON": "mpc-portal-common",
+        "SQS_MPC_PORTAL_ORDER":  "rws-prod-m-orders.fifo",
+        "SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION": "mpc-portal-email_subscription",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_REQUEST": "mpc-portal-customer_info_request",
+        "SQS_MPC_PORTAL_COMMUNICATION_PREFERENCES": "mpc-portal-communication_preferences",
+        "SQS_MPC_MPC_COMMON_NAME":  "mpc-mpc-common",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_UPDATE": "mpc-portal-customer_info_update",
+
+        "PEACH_PAYMENT_BASE_URL": "https://test.oppwa.com/v1/",
+        "PEACH_PAYMENT_ENTITY_ID": "8a8294174e735d0c014e78cf26461790",
+        "PEACH_PAYMENT_ACCESS_TOKEN": "OGE4Mjk0MTc0ZTczNWQwYzAxNGU3OGNmMjY2YjE3OTR8cXl5ZkhDTjgzZQ==",
+        "PEACH_PAYMENT_WEBHOOKS_DECRYPTION_KEY": "need_real_value",
+
+        "AWS_COGNITO_USER_POOL_NAME": "mpc-chalice-api-user-pool",
+        "AWS_COGNITO_USER_POOL_ID": "eu-west-1_ffPTD4QCK",
+        "AWS_COGNITO_USER_POOL_ARN": "arn:aws:cognito-idp:eu-west-1:254084358738:userpool/eu-west-1_ffPTD4QCK",
+
+        "AWS_PERSONALIZE_CONFIG_SKU_REGION": "eu-west-1",
+        "AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_CAMPAIGN_ARN": "mpc-config-sku-hrnn-campaign",
+        "AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-config-sku-hrnn-with-meta-solution/893fc1df",
+        "AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_CAMPAIGN_ARN": "mpc-config-sku-similar-items-campaign",
+        "AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_SOLUTION_VERSION_ARN": "mpc-config-sku-similar-items-solution/f41b3fd9",
+        "AWS_PERSONALIZE_CONFIG_SKU_RANKING_CAMPAIGN_ARN": "mpc-config-sku-personalized-ranking-campaign",
+        "AWS_PERSONALIZE_CONFIG_SKU_RANKING_SOLUTION_VERSION_ARN": "mpc-config-sku-personalized-ranking-solution/d74c315c",
+        "AWS_PERSONALIZE_CONFIG_SKU_TRACKING_ID": "db9eb3db-da6a-4736-9f37-742287c559da",
+
+        "AWS_PERSONALIZE_SIZE_REGION": "us-east-1",
+        "AWS_PERSONALIZE_SIZE_RECOMMEND_CAMPAIGN_ARN": "",
+        "AWS_PERSONALIZE_SIZE_RECOMMEND_SOLUTION_VERSION_ARN": "",
+        "AWS_PERSONALIZE_SIZE_RANKING_CAMPAIGN_ARN": "mpc-product-size-personalized-rank-campaign",
+        "AWS_PERSONALIZE_SIZE_TRACKING_ID": "ba0ddaac-a8ef-4fc9-8b4c-398e460af9e1",
+
+        "AWS_PERSONALIZE_BRAND_REGION": "eu-west-1",
+        "AWS_PERSONALIZE_BRAND_RECOMMEND_CAMPAIGN_ARN": "mpc-brands-hrnn-with-meta-campaign",
+        "AWS_PERSONALIZE_BRAND_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-brands-hrnn-with-meta/2df01501",
+        "AWS_PERSONALIZE_BRAND_TRACKING_ID": "dee2c6ee-8cb5-4671-b77d-2bb90cd09a21",
+
+        "AWS_PERSONALIZE_PRODUCT_TYPE_REGION": "us-east-1",
+        "AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_CAMPAIGN_ARN": "mpc-product-type-hrnn-campaign",
+        "AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-product-type-hrnn/aece4a09",
+        "AWS_PERSONALIZE_PRODUCT_TYPE_SIMILAR_ITEMS_CAMPAIGN_ARN": "mpc-product-type-similar-items-campaign",
+        "AWS_PERSONALIZE_PRODUCT_TYPE_RANKING_CAMPAIGN_ARN": "mpc-product-type-personalized-ranking-campaign",
+        "AWS_PERSONALIZE_PRODUCT_TYPE_TRACKING_ID": "0723edff-ac8a-4374-9c56-95518ed344cc",
+
+        "AWS_PERSONALIZE_PRICE_REGION": "",
+        "AWS_PERSONALIZE_PRICE_RECOMMEND_CAMPAIGN_ARN": "",
+
+        "AWS_PERSONALIZE_GENDER_REGION": "eu-west-1",
+        "AWS_PERSONALIZE_GENDER_RECOMMEND_CAMPAIGN_ARN": "mpc-gender-hrnn-cmp",
+        "AWS_PERSONALIZE_GENDER_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-gender-hrnn-solution/2cd95e80",
+        "AWS_PERSONALIZE_GENDER_TRACKING_ID": "76c448dd-d8a3-4701-a89a-db9c61747c11"
+      }
+    },
+
+    "dev": {
+      "api_gateway_stage": "api",
+      "lambda_functions": {
+        "handle_sqs_message": {
+          "lambda_timeout": 30
+        }
+      },
+      "environment_variables": {
+        "STAGE": "dev",
+        "FRONTEND_BASE_URL": "http://storybook-dev.mpc.runway.co.za",
+        "FILE_STORAGE_CONFIG": "{\"class\": \"chalicelib.libs.core.file_storage._AwsS3FileStorage\", \"params\": {\"bucket\": \"mpc-uploads-dev\", \"root_url\": \"https://mpc-uploads-dev.s3-eu-west-1.amazonaws.com/\"}}",
+
+        "SQS_PORTAL_MPC_COMMON":  "dev-portal-mpc-common",
+        "SQS_PORTAL_MPC_CUSTOMER_INFO_UPDATE":  "dev-portal-mpc-customer_info_update",
+        "SQS_PORTAL_MPC_ORDER":  "dev-portal-mpc-order.fifo",
+        "SQS_MPC_PORTAL_COMMON": "dev-mpc-portal-common",
+        "SQS_MPC_PORTAL_ORDER":  "dev-mpc-portal-order",
+        "SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION": "dev-mpc-portal-email_subscription",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_REQUEST": "dev-mpc-portal-customer_info_request",
+        "SQS_MPC_PORTAL_COMMUNICATION_PREFERENCES": "dev-mpc-portal-communication_preferences",
+        "SQS_MPC_MPC_COMMON_NAME":  "dev-mpc-mpc-common",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_UPDATE": "dev-mpc-portal-customer_info_update",
+        "NEW_PRODUCT_THRESHOLD": "600"
+      }
+    },
+
+    "stage": {
+      "api_gateway_stage": "stage",
+      "lambda_functions": {
+        "handle_sqs_message": {
+          "lambda_timeout": 60
+        }
+      },
+      "environment_variables": {
+        "STAGE": "stage",
+        "FRONTEND_BASE_URL": "http://storybook-stage.mpc.runway.co.za",
+
+        "AWS_DYNAMODB_CMS_TABLE_NAME": "CMS_Stage",
+        "AWS_DYNAMODB_MAGENTO_CUSTOMER_TABLE_NAME": "Magento_Stage",
+        "AWS_DYNAMODB_BANNER_TABLE_NAME": "Banners_Stage",
+
+        "AWS_ELASTICSEARCH_HOST": "search-mpc-stage-ud6l6xg4uph5kwunqblyuu5s2i.eu-west-1.es.amazonaws.com",
+
+        "FILE_STORAGE_CONFIG": "{\"class\": \"chalicelib.libs.core.file_storage._AwsS3FileStorage\", \"params\": {\"bucket\": \"mpc-uploads-stage\", \"root_url\": \"https://mpc-uploads-stage.s3-eu-west-1.amazonaws.com/\"}}",
+
+        "SQS_PORTAL_MPC_COMMON":  "stage-portal-mpc-common",
+        "SQS_PORTAL_MPC_CUSTOMER_INFO_UPDATE":  "stage-portal-mpc-customer_info_update",
+        "SQS_PORTAL_MPC_ORDER":  "stage-portal-mpc-order.fifo",
+        "SQS_MPC_PORTAL_COMMON": "stage-mpc-portal-common",
+        "SQS_MPC_PORTAL_ORDER":  "stage-mpc-portal-order",
+        "SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION": "stage-mpc-portal-email_subscription",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_REQUEST": "stage-mpc-portal-customer_info_request",
+        "SQS_MPC_PORTAL_COMMUNICATION_PREFERENCES": "stage-mpc-portal-communication_preferences",
+        "SQS_MPC_MPC_COMMON_NAME":  "stage-mpc-mpc-common",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_UPDATE": "stage-mpc-portal-customer_info_update",
+        "NEW_PRODUCT_THRESHOLD": "600"
+      }
+    },
+
+    "igor": {
+      "api_gateway_stage": "api",
+      "lambda_functions": {
+        "handle_sqs_message": {
+          "lambda_timeout": 30
+        }
+      },
+      "environment_variables": {
+        "STAGE": "igor",
+        "FRONTEND_BASE_URL": "https://storybook-igor.mpc.runway.co.za",
+        "FILE_STORAGE_CONFIG": "{\"class\": \"chalicelib.libs.core.file_storage._AwsS3FileStorage\", \"params\": {\"bucket\": \"mpc-uploads-igor\", \"root_url\": \"https://mpc-uploads-igor.s3-eu-west-1.amazonaws.com/\"}}",
+
+        "SQS_PORTAL_MPC_COMMON":  "dev-portal-mpc-common",
+        "SQS_PORTAL_MPC_CUSTOMER_INFO_UPDATE":  "dev-portal-mpc-customer_info_update",
+        "SQS_PORTAL_MPC_ORDER":  "dev-portal-mpc-order.fifo",
+        "SQS_MPC_PORTAL_COMMON": "dev-mpc-portal-common",
+        "SQS_MPC_PORTAL_ORDER":  "dev-mpc-portal-order",
+        "SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION": "dev-mpc-portal-email_subscription",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_REQUEST": "dev-mpc-portal-customer_info_request",
+        "SQS_MPC_PORTAL_COMMUNICATION_PREFERENCES": "dev-mpc-portal-communication_preferences",
+        "SQS_MPC_MPC_COMMON_NAME":  "dev-mpc-mpc-common",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_UPDATE": "dev-mpc-portal-customer_info_update"
+      }
+    },
+    "liming": {
+      "api_gateway_stage": "api",
+      "lambda_functions": {
+        "handle_sqs_message": {
+          "lambda_timeout": 30
+        }
+      },
+      "environment_variables": {
+        "STAGE": "liming",
+        "FILE_STORAGE_CONFIG": "{\"class\": \"chalicelib.libs.core.file_storage._AwsS3FileStorage\", \"params\": {\"bucket\": \"mpc-uploads-igor\", \"root_url\": \"https://mpc-uploads-igor.s3-eu-west-1.amazonaws.com/\"}}",
+
+        "SQS_PORTAL_MPC_COMMON":  "dev-portal-mpc-common",
+        "SQS_PORTAL_MPC_CUSTOMER_INFO_UPDATE":  "dev-portal-mpc-customer_info_update",
+        "SQS_PORTAL_MPC_ORDER":  "dev-portal-mpc-order.fifo",
+        "SQS_MPC_PORTAL_COMMON": "dev-mpc-portal-common",
+        "SQS_MPC_PORTAL_ORDER":  "dev-mpc-portal-order",
+        "SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION": "dev-mpc-portal-email_subscription",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_REQUEST": "dev-mpc-portal-customer_info_request",
+        "SQS_MPC_PORTAL_COMMUNICATION_PREFERENCES": "dev-mpc-portal-communication_preferences",
+        "SQS_MPC_MPC_COMMON_NAME":  "dev-mpc-mpc-common",
+        "SQS_MPC_PORTAL_CUSTOMER_INFO_UPDATE": "dev-mpc-portal-customer_info_update"
+      }
+    }
+  }
+}

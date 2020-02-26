@@ -1,0 +1,75 @@
+{
+  "resources": [
+    {
+      "name": "default-role",
+      "resource_type": "iam_role",
+      "role_arn": "arn:aws:iam::917885688343:role/mpc_chalice_api-nikita",
+      "role_name": "mpc_chalice_api-nikita"
+    },
+    {
+      "name": "sqs_1816ae22ca5b6226412e89819e4d93a2",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_1816ae22ca5b6226412e89819e4d93a2"
+    },
+    {
+      "name": "sqs_1816ae22ca5b6226412e89819e4d93a2-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:mpc-cms-in",
+      "event_uuid": "244eb00a-10ae-4535-9dd9-51501ecb10c6",
+      "queue": "mpc-cms-in",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_1816ae22ca5b6226412e89819e4d93a2"
+    },
+    {
+      "name": "sqs_ad584293685cb56db4b5dff9283d33d0",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_ad584293685cb56db4b5dff9283d33d0"
+    },
+    {
+      "name": "sqs_ad584293685cb56db4b5dff9283d33d0-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:mpc-data-products-in",
+      "event_uuid": "c0fe9478-3989-41a4-ac4c-0214d44480c9",
+      "queue": "mpc-data-products-in",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_ad584293685cb56db4b5dff9283d33d0"
+    },
+    {
+      "name": "sqs_a1b3e61725908e58032798464b4c4826",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_a1b3e61725908e58032798464b4c4826"
+    },
+    {
+      "name": "sqs_a1b3e61725908e58032798464b4c4826-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:mpc-delta-cache",
+      "event_uuid": "c79f757d-74b5-4182-8473-e583493b3adb",
+      "queue": "mpc-delta-cache",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_a1b3e61725908e58032798464b4c4826"
+    },
+    {
+      "name": "sqs_fcd8a7c1fcf0934516c0503536bbdc4a",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_fcd8a7c1fcf0934516c0503536bbdc4a"
+    },
+    {
+      "name": "sqs_fcd8a7c1fcf0934516c0503536bbdc4a-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:mpc-regular_eft_payment_in.fifo",
+      "event_uuid": "cdc6ea71-5bee-42ad-b02b-27303bae29a7",
+      "queue": "mpc-regular_eft_payment_in.fifo",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita-sqs_fcd8a7c1fcf0934516c0503536bbdc4a"
+    },
+    {
+      "name": "api_handler",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-nikita"
+    },
+    {
+      "name": "rest_api",
+      "resource_type": "rest_api",
+      "rest_api_id": "fanb42sxl9",
+      "rest_api_url": "https://fanb42sxl9.execute-api.eu-west-1.amazonaws.com/api/"
+    }
+  ],
+  "schema_version": "2.0",
+  "backend": "api"
+}

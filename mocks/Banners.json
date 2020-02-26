@@ -1,0 +1,79 @@
+
+{
+    "Banners": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "banner_id": {"N": "1"},
+                    "title": {"S": "SPRING"},
+                    "gender": {"L": [
+                        {"S": "mens"}
+                    ]},
+                    "position": {"N": "1"},
+                    "active": {"N": "1"},
+                    "start_date": {"NULL": true},
+                    "end_date": {"NULL": true},
+                    "image": {"S": "http://lorempixel.com/300/200/people/"},
+                    "url": {"NULL": true},
+                    "heading": {"S": "Hot hot sale!"},
+                    "subheading": {"S": "Shop bestsellers on sale in your size"},
+                    "buttons": {"L": 
+                        [
+                            {
+                                "M":{
+                                    "colour": {"S": "#ffffff"},
+                                    "text": {"S": "Shop Shoes"},
+                                    "url": {"S": "/shop/shoes"}
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "banner_id": {"N": "2"},
+                    "title": {"S": "SPRING COLLECTION"},
+                    "gender": {"L": [
+                        {"S": "mens"}
+                    ]},
+                    "position": {"N": "1"},
+                    "active": {"N": "0"},
+                    "start_date": {"S": "0000-00-00 00:00:00"},
+                    "end_date": {"S": "0000-00-00 00:00:00"},
+                    "image": {"S": "http://lorempixel.com/300/200/people/"},
+                    "url": {"S": "http://test.com"},
+                    "heading": {"S": "Hot hot hot sale!"},
+                    "subheading": {"S": "Shop bestsellers on sale in your size"},
+                    "buttons": {"L": 
+                        [
+                            {
+                                "M": {
+                                    "colour": {"S": "#ffffff"},
+                                    "text": {"S": "Shop Shoes"},
+                                    "url": {"S": "/shop/shoes"}
+                                }
+                            },
+                            {
+                                "M":{
+                                    "colour": {"S": "blue_hexcode"},
+                                    "text": {"S": "Shop Dresses"},
+                                    "url": {"S": "/shop/dresses"}
+                                }
+                            },
+                            {
+                                "M":{
+                                    "colour": {"S": "blue_hexcode"},
+                                    "text": {"S": "Shop Accessories"},
+                                    "url": {"S": "/shop/accessories"}
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

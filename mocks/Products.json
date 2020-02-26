@@ -1,0 +1,82 @@
+{
+    "Products": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "portal_config_id": {"S": "172093"},
+                    "event_code": {"S": "null"},
+                    "supplier": {"S": "Cotton On South Africa (Pty) Ltd"},
+                    "manufacturer": {"S": "Cotton On"},
+                    "season": {"S": "null"},
+                    "product_size_attribute": {"S": "Bottoms"},
+                    "rs_product_sub_type": {"S": "Skirts"},
+                    "rs_colour": {"S": "BLANK"},
+                    "gender": {"S": "LADIES"},
+                    "supplier_product_name": {"S": "null"},
+                    "product_name": {"S": "woven daria pleated midi \/SIENNA SOFT CHECK ORANGE"},
+                    "size_chart": {"S": "null"},
+                    "neck_type": {"S": "null"},
+                    "fit": {"S": "null"},
+                    "dimensions": {"S": "null"},
+                    "fabrication": {"S": "null"},
+                    "size_fit": {"S": "null"},
+                    "product_description": {"S": "woven daria pleated midi \/SIENNA SOFT CHECK ORANGE"},
+                    "supplier_sku": {"S": "2006406-17"},
+                    "rs_sku": {"S": "COT_200640617_BLANK"},
+                    "rrp_rounded": {"N": "450"},
+                    "rrp": {"S": "450.00"},
+                    "wsp": {"S": "0.00"},
+                    "cost_price_excl_vat": {"N": "38.61739130434783"},
+                    "cost_price_incl_vat": {"S": "44.41"},
+                    "rs_price_with_mark_up": {"N": "460.40999999999997"},
+                    "rs_selling_price": {"S": "229.00"},
+                    "discount": {"N": "49"},
+                    "status": {"N": "0"},
+                    "sizes": 
+                    {
+                        "L": [
+                            {
+                                "M": {
+                                    "size": {"S": "L"},
+                                    "status": {"N": "0"},
+                                    "rs_simple_sku": {"S": "COT_200640617_BLANK-L"},
+                                    "portal_simple_id": {"S": "585271"},
+                                    "portal_config_id": {"S": "172093"}
+                                }
+                            },
+                            {
+                                "M": {
+                                    "size": {"S": "M"},
+                                    "status": {"N": "0"},
+                                    "rs_simple_sku": {"S": "COT_200640617_BLANK-M"},
+                                    "portal_simple_id": {"S": "585272"},
+                                    "portal_config_id": {"S": "172093"}
+                                }
+                            },
+                            {
+                                "M": {
+                                    "size": {"S": "S"},
+                                    "status": {"N": "0"},
+                                    "rs_simple_sku": {"S": "COT_200640617_BLANK-S"},
+                                    "portal_simple_id": {"S": "585273"},
+                                    "portal_config_id": {"S": "172093"}
+                                }
+                            }
+                        ]
+                    },
+                    "images": {
+                        "L": [
+                            {
+                                "M": {
+                                    "s3_filepath": {"S": "https:\/\/rws-portal-global.s3.eu-west-1.amazonaws.com\/Images\/FOO_FWL00580_BLACKANDWHITE\/FOO_FWL00580_BLACKANDWHITE%7C2.jpeg"},
+                                    "position": {"S": "FOO_FWL00580_BLACKANDWHITE|1"},
+                                    "delete": {"N": "0"}
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

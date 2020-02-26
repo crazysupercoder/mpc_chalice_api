@@ -1,0 +1,80 @@
+{
+  "resources": [
+    {
+      "name": "default-role",
+      "resource_type": "iam_role",
+      "role_arn": "arn:aws:iam::917885688343:role/mpc_chalice_api-dev",
+      "role_name": "mpc_chalice_api-dev"
+    },
+    {
+      "name": "cognito-hook-dev",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-cognito-hook-dev"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-common",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-common"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-common-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:dev-portal-mpc-common",
+      "event_uuid": "12f7c326-160b-4d71-99f2-5e0c6aea7ff0",
+      "queue": "dev-portal-mpc-common",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-common"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-order-fifo",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-order-fifo"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-order-fifo-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:dev-portal-mpc-order.fifo",
+      "event_uuid": "76ff203e-8b72-4c27-bac5-17f30b898e1a",
+      "queue": "dev-portal-mpc-order.fifo",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-order-fifo"
+    },
+    {
+      "name": "sqs_dev-mpc-mpc-common",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-mpc-mpc-common"
+    },
+    {
+      "name": "sqs_dev-mpc-mpc-common-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:dev-mpc-mpc-common",
+      "event_uuid": "edc4278f-b78d-431f-b709-97df7900054a",
+      "queue": "dev-mpc-mpc-common",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-mpc-mpc-common"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-customer_info_update",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-customer_info_update"
+    },
+    {
+      "name": "sqs_dev-portal-mpc-customer_info_update-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:917885688343:dev-portal-mpc-customer_info_update",
+      "event_uuid": "6ae1f155-0249-4111-ab39-93ffa0306c42",
+      "queue": "dev-portal-mpc-customer_info_update",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev-sqs_dev-portal-mpc-customer_info_update"
+    },
+    {
+      "name": "api_handler",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:917885688343:function:mpc_chalice_api-dev"
+    },
+    {
+      "name": "rest_api",
+      "resource_type": "rest_api",
+      "rest_api_id": "8etwynadj3",
+      "rest_api_url": "https://8etwynadj3.execute-api.eu-west-1.amazonaws.com/api/"
+    }
+  ],
+  "schema_version": "2.0",
+  "backend": "api"
+}

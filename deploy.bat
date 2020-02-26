@@ -1,0 +1,1 @@
+chalice deploy --profile=mpc

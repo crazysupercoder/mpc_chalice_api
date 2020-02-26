@@ -1,0 +1,16 @@
+.chalice/deployments/
+.chalice/venv/
+.vscode/*
+.idea/*
+*.pyc
+venv
+*.*#
+.idea/*
+mocks/*.csv
+mocks/*/*.json
+test.py
+run_local.sh
+chalicelib/.env
+chalicelib/.env.prod
+chalicelib/.env.stage
+deploy*.sh

@@ -1,0 +1,75 @@
+{
+  "resources": [
+    {
+      "name": "default-role",
+      "resource_type": "iam_role",
+      "role_arn": "arn:aws:iam::254084358738:role/mpc_chalice_api-production",
+      "role_name": "mpc_chalice_api-production"
+    },
+    {
+      "name": "sqs_portal-mpc-common",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-common"
+    },
+    {
+      "name": "sqs_portal-mpc-common-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:254084358738:portal-mpc-common",
+      "event_uuid": "ea7f5498-b2c5-48e6-8730-91b3b460dc61",
+      "queue": "portal-mpc-common",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-common"
+    },
+    {
+      "name": "sqs_portal-mpc-order-fifo",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-order-fifo"
+    },
+    {
+      "name": "sqs_portal-mpc-order-fifo-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:254084358738:portal-mpc-order.fifo",
+      "event_uuid": "a8120813-5ddd-4b22-a277-f55a36f8b2ea",
+      "queue": "portal-mpc-order.fifo",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-order-fifo"
+    },
+    {
+      "name": "sqs_mpc-mpc-common",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_mpc-mpc-common"
+    },
+    {
+      "name": "sqs_mpc-mpc-common-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:254084358738:mpc-mpc-common",
+      "event_uuid": "675bd97a-200e-4164-bcdd-3476944a00be",
+      "queue": "mpc-mpc-common",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_mpc-mpc-common"
+    },
+    {
+      "name": "sqs_portal-mpc-customer_info_update",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-customer_info_update"
+    },
+    {
+      "name": "sqs_portal-mpc-customer_info_update-sqs-event-source",
+      "resource_type": "sqs_event",
+      "queue_arn": "arn:aws:sqs:eu-west-1:254084358738:portal-mpc-customer_info_update",
+      "event_uuid": "48bbc52a-fc8c-405d-a949-cf74ef3a09ae",
+      "queue": "portal-mpc-customer_info_update",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production-sqs_portal-mpc-customer_info_update"
+    },
+    {
+      "name": "api_handler",
+      "resource_type": "lambda_function",
+      "lambda_arn": "arn:aws:lambda:eu-west-1:254084358738:function:mpc_chalice_api-production"
+    },
+    {
+      "name": "rest_api",
+      "resource_type": "rest_api",
+      "rest_api_id": "1ijrc5osyg",
+      "rest_api_url": "https://1ijrc5osyg.execute-api.eu-west-1.amazonaws.com/api/"
+    }
+  ],
+  "schema_version": "2.0",
+  "backend": "api"
+}

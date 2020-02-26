@@ -1,0 +1,268 @@
+{
+  "mappings": {
+    "products": {
+      "properties": {
+        "discount": {
+          "type": "long"
+        },
+        "event_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "gender": {
+          "type": "keyword"
+        },
+        "release_date": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm"
+        },
+        "images": {
+          "properties": {
+            "delete": {
+              "type": "long"
+            },
+            "position": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "s3_filepath": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        },
+        "manufacturer": {
+          "type": "keyword"
+        },
+        "portal_config_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "prices": {
+          "properties": {
+            "ZAR": {
+              "properties": {
+                "cost_price_excl_vat": {
+                  "type": "float"
+                },
+                "cost_price_incl_vat": {
+                  "type": "float"
+                },
+                "currency": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "rate": {
+                  "type": "float"
+                },
+                "rrp": {
+                  "type": "float"
+                },
+                "rrp_rounded": {
+                  "type": "long"
+                },
+                "rs_price_with_mark_up": {
+                  "type": "float"
+                },
+                "selling_price": {
+                  "type": "float"
+                },
+                "symbol": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "wsp": {
+                  "type": "float"
+                }
+              }
+            }
+          }
+        },
+        "product_name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "neck_type": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "fit": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "dimensions": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "fabrication": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "size_fit": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "rs_colour": {
+          "type": "keyword"
+        },
+        "rs_event_code": {
+          "type": "keyword"
+        },
+        "url_key": {
+          "type": "keyword"
+        },
+        "rs_product_sub_type": {
+          "type": "keyword"
+        },
+        "product_type": {
+          "type": "keyword"
+        },
+        "season": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "size_chart": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "sizes": {
+          "properties": {
+            "portal_config_id": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "portal_simple_id": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "qty": {
+              "type": "long"
+            },
+            "rs_simple_sku": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "size_tag": {
+              "type": "keyword"
+            },
+            "simple_size": {
+              "type": "keyword"
+            },
+            "size": {
+              "type": "keyword"
+            },
+            "status": {
+              "type": "long"
+            }
+          }
+        },
+        "sku": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "status": {
+          "type": "long"
+        },
+        "supplier": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}

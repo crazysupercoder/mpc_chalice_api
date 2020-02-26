@@ -1,0 +1,74 @@
+{
+    "mappings" : {
+        "products": {
+            "properties" : {
+                "portal_config_id": { "type": "integer" },
+                "event_code": { "type": "text" },
+                "supplier_items": { 
+                    "properties": {
+                        "supplier_id": { "type": "integer" },
+                        "supplier_name": { "type": "text" },
+                        "rs_cost_price": { "type": "float" },
+                        "rs_cost_price_excl_vat": { "type": "float" },
+                        "rs_selling_price": { "type": "integer" },
+                        "full_retail_price": { "type": "integer" },
+                        "full_cost_price": { "type": "float" },
+                        "discount": { "type": "integer" },
+                        "markup": { "type": "integer" },
+                        "margin": { "type": "integer" },
+                        "type_name": { "type": "text" },
+                        "gender_name": { "type": "keyword" },
+                        "color_name": { "type": "text" },
+                        "product_sku": { "type": "keyword" },
+                        "product_name": { "type": "text" },
+                        "season": { "type": "text" }
+                    }
+                },
+                "manufacturer": { "type": "keyword", "fielddata": true },
+                "brand_code": { "type": "keyword" },
+                "season": { "type": "keyword" },
+                "product_size_attribute": { "type": "keyword" },
+                "rs_product_sub_type": { "type": "keyword" },
+                "rs_colour": { "type": "keyword" },
+                "gender": { "type": "keyword" },
+                "product_name": { "type": "text" },
+                "size_chart": { "type": "text" },
+                "neck_type": { "type": "text" },
+                "fit": { "type": "text" },
+                "dimensions": { "type": "text" },
+                "fabrication": { "type": "text" },
+                "size_fit": { "type": "text" },
+                "product_description": { "type": "text" },
+                "rs_sku": { "type": "keyword" },
+                "rrp_rounded": { "type": "integer" },
+                "rrp": { "type": "integer" },
+                "wsp": { "type": "integer" },
+                "cost_price_excl_vat": { "type": "float" },
+                "cost_price_incl_vat": { "type": "float" },
+                "rs_price_with_mark_up": { "type": "float" },
+                "rs_selling_price": { "type": "integer" },
+                "discount": { "type": "integer" },
+                "status": { "type": "integer" },
+                "created_at": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||date_hour_minute_second_millis" },
+                "updated_at": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||date_hour_minute_second_millis" },
+                "sizes": {
+                    "properties": {
+                        "size": { "type": "keyword" },
+                        "qty": { "type": "integer" },
+                        "status": { "type": "integer" },
+                        "rs_simple_sku": { "type": "keyword" },
+                        "portal_simple_id": { "type": "integer" },
+                        "portal_config_id": { "type": "integer" }
+                    }
+                },
+                "images": {
+                    "properties": {
+                        "s3_filepath": { "type": "text" },
+                        "position": { "type": "text" },
+                        "delete": { "type": "integer" }
+                    }
+                }
+            }
+        }
+    }
+}
