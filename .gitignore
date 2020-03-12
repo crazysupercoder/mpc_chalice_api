@@ -9,7 +9,7 @@ venv
 mocks/*.csv
 mocks/*/*.json
 test.py
-run_local.sh
+run*.sh
 chalicelib/.env
 chalicelib/.env.prod
 chalicelib/.env.stage

@@ -183,31 +183,11 @@ tracking_user_action_product_snapshot = {
 }
 
 
-delta_cache_mapping = {
-    "mappings": {
-        "delta_cache": {
-            "properties": {
-                "email": {"type": "keyword"},
-                "products": {
-                    "properties": {
-                        "rs_sku": {"type": "keyword"},
-                        "ps": {"type": "integer"},
-                        "qs": {"type": "integer"},
-                        "os": {"type": "integer"}
-                    }
-                }
-            }
-        }
-    }
-}
-
-
 scored_products_mapping = {
     "mappings": {
         "scored_products": {
             "properties": {
                 'customer_id': {'type': 'keyword'},
-                'personalize_score': {'type': 'float'},
                 'question_score': {'type': 'float'},
                 'order_score': {'type': 'float'},
                 'tracking_score': {'type': 'float'},

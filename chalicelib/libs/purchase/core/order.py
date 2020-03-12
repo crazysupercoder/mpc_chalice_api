@@ -6,7 +6,7 @@ from .dtd import Dtd
 from .payments import PaymentMethodAbstract
 
 
-# @TODO : REFACTORING
+# @todo : refactoring
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -21,6 +21,7 @@ class _Status(object):
     DELIVERED = 'Delivered'
     CANCELLED = 'Cancelled'
     CLOSED = 'Closed'
+    ON_HOLD = 'On Hold'
 
     __LIST = {
         AWAITING_PAYMENT: 'Awaiting Payment',
@@ -31,6 +32,7 @@ class _Status(object):
         DELIVERED: 'Delivered',
         CANCELLED: 'Cancelled',
         CLOSED: 'Closed',
+        ON_HOLD: 'On Hold',
     }
 
     def __init__(self, value: str) -> None:
@@ -116,7 +118,7 @@ class _Item(object):
         product_current_price: Cost,
         dtd: Dtd,
         qty_ordered: Qty,
-        fbucks_amount: Qty
+        fbucks_earnings: Cost
     ) -> None:
         if not isinstance(event_code, EventCode):
             raise ArgumentTypeException(self.__init__, 'event_code', event_code)
@@ -137,8 +139,8 @@ class _Item(object):
         elif qty_ordered.value < 1:
             raise ArgumentValueException('{} expects qty_ordered > 0'.format(self.__init__.__qualname__))
 
-        if not isinstance(fbucks_amount, Qty):
-            raise ArgumentTypeException(self.__init__, 'fbucks_amount', fbucks_amount)
+        if not isinstance(fbucks_earnings, Cost):
+            raise ArgumentTypeException(self.__init__, 'fbucks_earnings', fbucks_earnings)
 
         self.__event_code = event_code
         self.__simple_sku = simple_sku
@@ -153,9 +155,7 @@ class _Item(object):
         self.__qty_cancelled_after_payment_cancelled = Qty(0)
         self.__qty_refunded = Qty(0)
         self.__qty_modified_at = datetime.datetime.now()
-
-        # @todo : rename to "will earn" or so..
-        self.__fbucks_amount = fbucks_amount
+        self.__fbucks_earnings = fbucks_earnings
 
     @property
     def event_code(self) -> EventCode:
@@ -178,9 +178,8 @@ class _Item(object):
         return self.__dtd
 
     @property
-    def fbucks_amount(self) -> Qty:
-        """ Will earn. @todo : rename """
-        return self.__fbucks_amount
+    def fbucks_earnings(self) -> Cost:
+        return self.__fbucks_earnings
 
     @property
     def qty_ordered(self) -> Qty:
@@ -249,6 +248,13 @@ class _Item(object):
         return Cost(qty_paid * self.__product_current_price.value)
 
     def request_return(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.request_return, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.request_return.__qualname__
+            ))
+
         available_qty = self.qty_processable
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Request Return {} qty, only {} is available!'.format(
@@ -260,6 +266,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def decline_return(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.decline_return, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.decline_return.__qualname__
+            ))
+
         available_qty = self.__qty_return_requested
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Decline Return {} qty, only {} is available!'.format(
@@ -271,6 +284,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def reject_return(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.reject_return, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.reject_return.__qualname__
+            ))
+
         available_qty = self.__qty_return_requested
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Reject Return {} qty, only {} is available!'.format(
@@ -282,6 +302,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def close_return(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.close_return, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.close_return.__qualname__
+            ))
+
         available_qty = self.__qty_return_requested
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Close Return {} qty, only {} is requested!'.format(
@@ -294,6 +321,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def cancel_before_payment(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.cancel_before_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.cancel_before_payment.__qualname__
+            ))
+
         available_qty = self.qty_processable
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Cancel {} qty, only {} is available!'.format(
@@ -305,6 +339,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def request_cancellation_after_payment(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.request_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.request_cancellation_after_payment.__qualname__
+            ))
+
         available_qty = self.qty_processable
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Request Cancellation of {} qty, only {} is available!'.format(
@@ -316,6 +357,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def approve_cancellation_after_payment(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.approve_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.approve_cancellation_after_payment.__qualname__
+            ))
+
         available_qty = self.__qty_cancelled_after_payment_requested
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Approve Cancellation of {} qty, only {} is requested!'.format(
@@ -328,6 +376,13 @@ class _Item(object):
         self.__qty_modified_at = datetime.datetime.now()
 
     def decline_cancellation_after_payment(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.decline_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.decline_cancellation_after_payment.__qualname__
+            ))
+
         available_qty = self.__qty_cancelled_after_payment_requested
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Decline Cancellation of {} qty, only {} is requested!'.format(
@@ -338,13 +393,30 @@ class _Item(object):
         self.__qty_cancelled_after_payment_requested -= qty
         self.__qty_modified_at = datetime.datetime.now()
 
-    def refund(self, qty: Qty) -> None:
-        available_qty = (
+    @property
+    def __refundable_qty(self) -> Qty:
+        return (
             self.__qty_return_returned
-            + self.__qty_cancelled_before_payment
             + self.__qty_cancelled_after_payment_cancelled
             - self.__qty_refunded
         )
+
+    @property
+    def is_refundable(self) -> bool:
+        return self.__refundable_qty.value > 0
+
+    def refund(self, qty: Qty) -> None:
+        if not isinstance(qty, Qty):
+            raise ArgumentTypeException(self.refund, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.refund.__qualname__
+            ))
+
+        if not self.is_refundable:
+            raise ApplicationLogicException('Item "{}" is not Refundable!'.format(self.simple_sku.value))
+
+        available_qty = self.__refundable_qty
         if available_qty < qty:
             raise ApplicationLogicException('Unable to Refund {} qty, only {} is requested!'.format(
                 qty.value,
@@ -369,7 +441,7 @@ class Order(object):
         self,
         order_number: 'Order.Number',
         customer_id: Id,
-        order_items: Tuple['Order.Item'],
+        items: Tuple['Order.Item'],
         delivery_address: DeliveryAddress,
         delivery_cost: Cost,
         vat_percent: Percentage,
@@ -381,15 +453,15 @@ class Order(object):
         if not isinstance(customer_id, Id):
             raise ArgumentTypeException(self.__init__, 'customer_id', customer_id)
 
-        if not isinstance(order_items, tuple):
-            raise ArgumentTypeException(self.__init__, 'order_items', order_items)
-        elif sum([not isinstance(i, Order.Item) for i in order_items]) > 0:
+        if not isinstance(items, tuple):
+            raise ArgumentTypeException(self.__init__, 'items', items)
+        elif sum([not isinstance(i, Order.Item) for i in items]) > 0:
             raise TypeError('{0} expects tuple of {1}, {2} given!'.format(
                 self.__init__.__qualname__,
                 Order.Item.__qualname__,
-                str(order_items)
+                str(items)
             ))
-        elif not order_items:
+        elif not items:
             raise ArgumentValueException('{} expects at least one order item!'.format(self.__init__.__qualname__))
 
         if not isinstance(delivery_address, DeliveryAddress):
@@ -406,7 +478,7 @@ class Order(object):
 
         self.__order_number = order_number
         self.__customer_id = customer_id
-        self.__order_items = order_items
+        self.__items = items
         self.__delivery_address = delivery_address
         self.__delivery_cost = delivery_cost
         self.__vat_percent = vat_percent
@@ -426,17 +498,17 @@ class Order(object):
         # - Unable to cancel qty between "Payment Sent" and "Payment Received" statuses
 
         is_all_qty_processed = self.__is_all_qty_processed
-        qty_ordered = sum([item.qty_ordered.value for item in self.__order_items ])
+        qty_ordered = sum([item.qty_ordered.value for item in self.__items])
         qty_cancelled_before_payment = sum([
             item.qty_cancelled_before_payment.value
-            for item in self.__order_items
+            for item in self.__items
         ])
         qty_cancelled_after_payment_cancelled = sum([
             item.qty_cancelled_after_payment_cancelled.value
-            for item in self.__order_items
+            for item in self.__items
         ])
-        qty_return_returned = sum([item.qty_return_returned.value for item in self.__order_items])
-        qty_refunded = sum([item.qty_refunded.value for item in self.__order_items])
+        qty_return_returned = sum([item.qty_return_returned.value for item in self.__items])
+        qty_refunded = sum([item.qty_refunded.value for item in self.__items])
 
         def __always():
             return True
@@ -445,25 +517,72 @@ class Order(object):
             # @todo : set customer in constructor, storage instead of id
             # @todo : customer.is_rs_staff and email domain to settings or so ?
             from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
-            customer = CustomerStorageImplementation().load(self.customer_id)
+            customer = CustomerStorageImplementation().get_by_id(self.customer_id)
             customer_is_rs_staff = customer.email.value.split('@')[-1] == 'runwaysale.co.za'
             return self.__delivery_address.postal_code == '7777' or customer_is_rs_staff
 
+        def __was_only_in_statuses(statuses):
+            for _change in self.__status_history.get_all():
+                if _change.status.value not in statuses:
+                    return False
+
+            return True
+
         changes_map = {
             Order.Status.AWAITING_PAYMENT: {
+                Order.Status.ON_HOLD: __always,
                 Order.Status.PAYMENT_SENT: __always,
                 Order.Status.CANCELLED: lambda: is_all_qty_processed and qty_ordered == qty_cancelled_before_payment,
             },
             Order.Status.PAYMENT_SENT: {
+                Order.Status.ON_HOLD: __always,
                 Order.Status.PAYMENT_RECEIVED: __always,
                 Order.Status.CLOSED: __always,  # e.g. declined payment @todo : refactoring payment ?
             },
             Order.Status.PAYMENT_RECEIVED: {
+                Order.Status.ON_HOLD: __always,
                 Order.Status.AWAITING_COURIER: __always,
                 Order.Status.DELIVERED: __is_customer_rs_staff,
                 Order.Status.CANCELLED: lambda: is_all_qty_processed and qty_cancelled_after_payment_cancelled > 0,
             },
+            Order.Status.ON_HOLD: {
+                # only return back to itself - next statuses expect defined payment method
+                Order.Status.AWAITING_PAYMENT: lambda: __was_only_in_statuses((
+                    Order.Status.AWAITING_PAYMENT,
+                    Order.Status.ON_HOLD,
+                )),
+
+                # there is "Un-Hold" button, which turns order to previous status.
+                Order.Status.PAYMENT_SENT: lambda: self.__was_payment_sent and not self.was_paid,
+
+                Order.Status.PAYMENT_RECEIVED: lambda: (
+                    self.__was_payment_sent     # good line, but through on-hold
+                    or self.was_paid            # return back to itself
+                    # looks like, there is no sense of going back,
+                    # but let it be just in case (there is nothing bad)
+                    or self.__was_awaiting_courier
+                ),
+
+                Order.Status.AWAITING_COURIER: lambda: (
+                    self.was_paid                   # good line, but through on-hold
+                    or self.__was_awaiting_courier  # return back to itself
+                ),
+
+                Order.Status.CANCELLED: lambda: (
+                    # cancellation is enabled for on-hold orders
+                    (
+                        # before payment
+                        not self.__was_payment_sent
+                        and is_all_qty_processed and qty_cancelled_before_payment == qty_ordered
+                    ) or (
+                        # after payment
+                        self.was_paid
+                        and is_all_qty_processed and qty_cancelled_after_payment_cancelled > 0
+                    )
+                ),
+            },
             Order.Status.AWAITING_COURIER: {
+                Order.Status.ON_HOLD: __always,
                 Order.Status.IN_TRANSIT: __always,
                 Order.Status.CANCELLED: lambda: is_all_qty_processed and qty_cancelled_after_payment_cancelled > 0,
             },
@@ -508,14 +627,6 @@ class Order(object):
         self.__status_history.add(change)
 
     @property
-    def order_number(self) -> 'Order.Number':
-        """
-        @deprecated
-        @todo : remove (renamed to number)
-        """
-        return self.__order_number
-
-    @property
     def number(self) -> 'Order.Number':
         return self.__order_number
 
@@ -524,17 +635,8 @@ class Order(object):
         return self.__customer_id
 
     @property
-    def order_items(self) -> Tuple['Order.Item']:
-        """
-        @deprecated
-        @todo : remove (renamed to items)
-        :return:
-        """
-        return self.__order_items
-
-    @property
     def items(self) -> Tuple['Order.Item']:
-        return self.__order_items
+        return self.__items
 
     @property
     def delivery_address(self) -> DeliveryAddress:
@@ -542,11 +644,11 @@ class Order(object):
 
     @property
     def subtotal_original_cost_ordered(self) -> Cost:
-        return Cost(sum([order_item.total_original_cost_ordered.value for order_item in self.__order_items]))
+        return Cost(sum([order_item.total_original_cost_ordered.value for order_item in self.__items]))
 
     @property
     def subtotal_current_cost_ordered(self) -> Cost:
-        return Cost(sum([order_item.total_current_cost_ordered.value for order_item in self.__order_items]))
+        return Cost(sum([order_item.total_current_cost_ordered.value for order_item in self.__items]))
 
     @property
     def subtotal_vat_amount(self) -> Cost:
@@ -584,7 +686,7 @@ class Order(object):
     @property
     def total_current_cost_paid(self) -> Cost:
         return Cost(
-            sum([order_item.total_current_cost_paid.value for order_item in self.__order_items])
+            sum([order_item.total_current_cost_paid.value for order_item in self.__items])
             + self.delivery_cost.value
             - self.credit_spent_amount.value
         )
@@ -594,18 +696,13 @@ class Order(object):
         return Cost(
             sum([
                 order_item.product_current_price.value * order_item.qty_refunded.value
-                for order_item in self.__order_items
+                for order_item in self.__items
             ])
         )
 
     @property
-    def total_fbucks_amount(self) -> Qty:
-        """
-        Will earn
-        @todo : refactoring : make fbucks Cost type, not Qty ?
-        @todo : refactoring : rename to reward or so
-        """
-        return Qty(sum([order_item.fbucks_amount.value for order_item in self.__order_items]))
+    def total_fbucks_earnings(self) -> Cost:
+        return Cost(sum([order_item.fbucks_earnings.value for order_item in self.__items]))
 
     @property
     def payment_method(self) -> Optional['Order.PaymentMethodAbstract']:
@@ -640,7 +737,7 @@ class Order(object):
     def updated_at(self) -> datetime.datetime:
         return max(
             self.__status_history.get_last().datetime,
-            max([item.qty_modified_at for item in self.__order_items])
+            max([item.qty_modified_at for item in self.__items])
         )
 
     @property
@@ -655,6 +752,10 @@ class Order(object):
     @property
     def __was_payment_sent(self) -> bool:
         return self.__status_history.get_last_concrete(Order.Status.PAYMENT_SENT) is not None
+
+    @property
+    def __was_awaiting_courier(self) -> bool:
+        return self.__status_history.get_last_concrete(Order.Status.AWAITING_COURIER) is not None
 
     @property
     def was_paid(self) -> bool:
@@ -677,16 +778,16 @@ class Order(object):
         return self.__delivered_at is not None
 
     @property
-    def can_be_returned(self) -> bool:
-        """@todo : rename to is_returnable ? """
+    def is_returnable(self) -> bool:
         return (
             self.was_delivered
-            and self.can_be_returned_till and self.can_be_returned_till > datetime.datetime.now()
-            and sum([order_item.qty_processable.value for order_item in self.__order_items]) > 0
+            and not self.was_closed
+            and self.is_returnable_till and self.is_returnable_till > datetime.datetime.now()
+            and sum([order_item.qty_processable.value for order_item in self.__items]) > 0
         )
 
     @property
-    def can_be_returned_till(self) -> Optional[datetime.datetime]:
+    def is_returnable_till(self) -> Optional[datetime.datetime]:
         if not self.__delivered_at:
             return None
 
@@ -702,6 +803,10 @@ class Order(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.__return_qty_action, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.__return_qty_action.__qualname__
+            ))
 
         actions_map = {
             'request': {'method': Order.Item.request_return, 'action_label': 'Request'},
@@ -723,7 +828,7 @@ class Order(object):
         if not self.was_delivered:
             raise ApplicationLogicException(logic_error_message_prefix + 'Order is not Delivered!')
 
-        for order_item in self.__order_items:
+        for order_item in self.__items:
             if order_item.simple_sku == simple_sku:
                 try:
                     action_params['method'].__call__(order_item, qty)
@@ -737,7 +842,7 @@ class Order(object):
             ))
 
     def request_return(self, simple_sku: SimpleSku, qty: Qty) -> None:
-        if not self.can_be_returned:
+        if not self.is_returnable:
             raise ApplicationLogicException('Return can not be Requested for Order #{}!'.format(
                 self.number.value
             ))
@@ -758,17 +863,24 @@ class Order(object):
         """ no processable qty and no requested qty """
         return sum([
             item.qty_processable.value + item.qty_requested.value
-            for item in self.__order_items
+            for item in self.__items
         ]) == 0
 
     @property
+    def __is_any_qty_processable(self) -> bool:
+        return sum([item.qty_processable.value for item in self.__items]) > 0
+
+    @property
     def is_cancellable(self) -> bool:
+        is_payment_sent_but_not_received = (self.__was_payment_sent and not self.was_paid)
+
         return (
             not self.was_cancelled
+            and not self.was_closed
             and not self.was_delivered
             and not self.was_in_transit
-            and not (self.__was_payment_sent and not self.was_paid)
-            and sum([item.qty_processable.value for item in self.__order_items]) > 0
+            and not is_payment_sent_but_not_received
+            and self.__is_any_qty_processable
         )
 
     def cancel_before_payment(self, simple_sku: SimpleSku, qty: Qty) -> None:
@@ -777,6 +889,10 @@ class Order(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.cancel_before_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.cancel_before_payment.__qualname__
+            ))
 
         if not self.is_cancellable:
             raise ApplicationLogicException('Order #{} is Not Cancellable!'.format(self.number.value))
@@ -787,7 +903,7 @@ class Order(object):
                 self.number.value
             ))
 
-        for item in self.__order_items:
+        for item in self.__items:
             if item.simple_sku.value == simple_sku.value:
                 item.cancel_before_payment(qty)
                 break
@@ -806,6 +922,10 @@ class Order(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.request_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.request_cancellation_after_payment.__qualname__
+            ))
 
         if not self.is_cancellable:
             raise ApplicationLogicException('Order #{} is Not Cancellable!'.format(self.number.value))
@@ -816,7 +936,7 @@ class Order(object):
                 self.number.value
             ))
 
-        for item in self.__order_items:
+        for item in self.__items:
             if item.simple_sku.value == simple_sku.value:
                 item.request_cancellation_after_payment(qty)
                 break
@@ -832,8 +952,12 @@ class Order(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.approve_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.approve_cancellation_after_payment.__qualname__
+            ))
 
-        for item in self.__order_items:
+        for item in self.__items:
             if item.simple_sku.value == simple_sku.value:
                 item.approve_cancellation_after_payment(qty)
                 break
@@ -852,8 +976,12 @@ class Order(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.decline_cancellation_after_payment, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(
+                self.decline_cancellation_after_payment.__qualname__
+            ))
 
-        for item in self.__order_items:
+        for item in self.__items:
             if item.simple_sku.value == simple_sku.value:
                 item.decline_cancellation_after_payment(qty)
                 break
@@ -863,14 +991,23 @@ class Order(object):
                 self.number.value
             ))
 
+    @property
+    def is_refundable(self) -> bool:
+        return sum([item.is_refundable for item in self.__items]) > 0
+
     def refund(self, simple_sku: SimpleSku, qty: Qty) -> None:
         if not isinstance(simple_sku, SimpleSku):
             raise ArgumentTypeException(self.refund, 'simple_sku', simple_sku)
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.refund, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(self.refund.__qualname__))
 
-        for item in self.__order_items:
+        if not self.is_refundable:
+            raise ApplicationLogicException('Order #{} is not Refundable!'.format(self.number.value))
+
+        for item in self.__items:
             if item.simple_sku.value == simple_sku.value:
                 item.refund(qty)
                 break
@@ -882,7 +1019,8 @@ class Order(object):
             ))
 
         if self.__is_all_qty_processed:
-            self.__change_status(Order.Status(Order.Status.CLOSED))
+            if not self.was_closed:
+                self.__change_status(Order.Status(Order.Status.CLOSED))
 
 
 # ----------------------------------------------------------------------------------------------------------------------

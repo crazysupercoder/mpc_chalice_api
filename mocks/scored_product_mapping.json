@@ -4,7 +4,6 @@
         "portal_config_id": { "type": "integer" },
         "rs_sku": { "type": "keyword" },
         "updated_at": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||date_hour_minute_second_millis" },
-        "personalize_score": { "type": "float" },
         "question_score": { "type": "float" },
         "order_score": { "type": "float" },
         "tracking_score": { "type": "float" }

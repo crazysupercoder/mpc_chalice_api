@@ -2,10 +2,10 @@ from typing import Optional
 from chalicelib.extensions import *
 from chalicelib.settings import settings
 from chalicelib.libs.models.mpc.base import DynamoModel
-from chalicelib.libs.purchase.core.values import Id, SimpleSku, Qty, DeliveryAddress, Cost, Percentage
-from chalicelib.libs.purchase.core.customer import CustomerStorageInterface
-from chalicelib.libs.purchase.core.product import ProductStorageInterface
-from chalicelib.libs.purchase.core.checkout import CheckoutItem, Checkout, CheckoutStorageInterface
+from chalicelib.libs.purchase.core import \
+    Id, SimpleSku, Qty, DeliveryAddress, Cost, Percentage,\
+    CustomerStorageInterface, ProductStorageInterface, \
+    Checkout, CheckoutStorageInterface
 
 
 # @todo : refactoring : dynamo db composition
@@ -80,7 +80,7 @@ class _CheckoutDynamoDbStorage(DynamoModel, CheckoutStorageInterface):
 
     def __restore(self, data) -> Checkout:
         customer_id = Id(data.get('sk'))
-        customer = self.__customer_storage.load(customer_id)
+        customer = self.__customer_storage.get_by_id(customer_id)
 
         checkout_items = []
         for item in data.get('checkout_items', tuple()):
@@ -88,7 +88,7 @@ class _CheckoutDynamoDbStorage(DynamoModel, CheckoutStorageInterface):
             qty = Qty(int(item.get('qty')))
 
             product = self.__product_storage.load(simple_sku)
-            checkout_item = CheckoutItem(product, qty)
+            checkout_item = Checkout.Item(product, qty)
             checkout_items.append(checkout_item)
 
         delivery_address = DeliveryAddress(
@@ -111,6 +111,7 @@ class _CheckoutDynamoDbStorage(DynamoModel, CheckoutStorageInterface):
         available_credits_amount = Cost(float(data.get('credits_available_amount', '0') or '0'))
         is_credits_in_use = bool(int(data.get('is_credits_in_use', '0') or '0'))
 
+        # @todo : reflection
         checkout = object.__new__(Checkout)
         checkout._Checkout__customer = customer
         checkout._Checkout__checkout_items = checkout_items

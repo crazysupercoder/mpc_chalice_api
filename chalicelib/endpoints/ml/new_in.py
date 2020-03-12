@@ -1,6 +1,7 @@
-from ...libs.models.ml.products import Product
-from ...libs.models.mpc.user import User
+
 from ...libs.core.chalice.request import MPCRequest
+from ...libs.models.ml.scored_products import ScoredProduct
+from ...libs.models.mpc.user import User
 
 
 def register_new_ins(blue_print):
@@ -13,34 +14,19 @@ def register_new_ins(blue_print):
     @blue_print.route('/new_in', cors=True)
     def new_in(email=''):
         request = __get_request()
-        product = Product()
-        products = product.get_new_products(
-            page=request.page, size=request.size,
-            customer_id=request.current_user.email,
-            gender=request.gender)
-        return products
+        product = ScoredProduct()
+        response = product.get_new_products(
+            customer_id=request.current_user.id,
+            gender=request.gender,
+            tier=request.current_user.profile.tier,
+            page=request.page, size=request.size)
+        return response['products']
 
     @blue_print.route('/last_chance', cors=True)
     def last_chance():
         request = __get_request()
-        product = Product()
-        product_types = product.get_last_chance(
+        product_types = ScoredProduct().get_last_chance(
+            customer_id=request.current_user.id,
             page=request.page, size=request.size,
-            customer_id=request.current_user.email,
             gender=request.gender)
         return product_types
-
-    @blue_print.route('/bestsellers', cors=True)
-    def best_sellers():
-        request = blue_print.current_request
-        product = Product()
-        best_sellers = product.get_bestsellers(page=request.page, size=request.size)
-        return best_sellers
-
-    @blue_print.route('/bestsellers/{product_type_name}', cors=True)
-    def best_sellers(product_type_name):
-        request = blue_print.current_request
-        product = Product()
-        best_sellers = product.get_bestsellers(
-            product_type=product_type_name, page=request.page, size=request.size)
-        return best_sellers

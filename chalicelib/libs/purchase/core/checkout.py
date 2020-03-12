@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 from chalicelib.extensions import *
-from .customer import Customer
+from .customer import CustomerInterface
 from .values import DeliveryAddress
 from .product import ProductInterface
 from .values import Id, EventCode, SimpleSku, Qty, Cost, Percentage
@@ -9,7 +9,7 @@ from .values import Id, EventCode, SimpleSku, Qty, Cost, Percentage
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class CheckoutItem(object):
+class _CheckoutItem(object):
     def __init__(self, product: ProductInterface, qty: Qty):
         if not isinstance(product, ProductInterface):
             raise ArgumentTypeException(self.__init__, 'product', ProductInterface)
@@ -58,20 +58,22 @@ class CheckoutItem(object):
 
 
 class Checkout(object):
+    class Item(_CheckoutItem): pass
+
     def __init__(
         self,
-        customer: Customer,
-        checkout_items: Tuple[CheckoutItem],
+        customer: CustomerInterface,
+        checkout_items: Tuple['Checkout.Item'],
         delivery_cost: Cost,
         vat_percent: Percentage
     ):
-        if not isinstance(customer, Customer):
+        if not isinstance(customer, CustomerInterface):
             raise ArgumentTypeException(self.__init__, 'customer', customer)
 
-        if sum([not isinstance(checkout_item, CheckoutItem) for checkout_item in checkout_items]) > 0:
+        if sum([not isinstance(checkout_item, Checkout.Item) for checkout_item in checkout_items]) > 0:
             raise TypeError('{0} expects array of {1} in {2}, but {3} is given!'.format(
                 self.__init__.__qualname__,
-                CheckoutItem.__qualname__,
+                Checkout.Item.__qualname__,
                 'checkout_items',
                 str(checkout_items)
             ))
@@ -119,7 +121,7 @@ class Checkout(object):
         return self.__customer.customer_id
 
     @property
-    def checkout_items(self) -> Tuple[CheckoutItem]:
+    def checkout_items(self) -> Tuple['Checkout.Item']:
         return tuple(self.__checkout_items)
 
     @property

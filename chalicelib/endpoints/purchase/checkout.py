@@ -1,7 +1,7 @@
 import math
 from chalice import Blueprint
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id
+from chalicelib.libs.purchase.core import Id
 from chalicelib.libs.models.mpc.user import User
 from chalicelib.libs.models.mpc.Product import Product as MpcProduct
 from chalicelib.libs.purchase.checkout.storage import CheckoutStorageImplementation
@@ -28,7 +28,6 @@ def register_checkout(blueprint: Blueprint):
             raise ApplicationLogicException('Checkout is not initiated!')
 
         tier = blueprint.current_request.current_user.profile.tier
-
 
         checkout_items_data = []
         for checkout_item in checkout.checkout_items:
@@ -174,7 +173,8 @@ def register_checkout(blueprint: Blueprint):
         # but this is impossible for now, so we have what we have.
 
         from chalicelib.settings import settings
-        from chalicelib.libs.core.elastic import Elastic
+        # from chalicelib.libs.core.elastic import Elastic
+        from chalicelib.libs.models.mpc.base import DynamoModel
         from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
         from chalicelib.libs.purchase.customer.storage import CustomerTierStorageImplementation
 
@@ -183,7 +183,7 @@ def register_checkout(blueprint: Blueprint):
 
             customers_storage = CustomerStorageImplementation()
             tiers_storage = CustomerTierStorageImplementation()
-            customer = customers_storage.load(Id(user_id))
+            customer = customers_storage.get_by_id(Id(user_id))
             if customer.tier.is_neutral:
                 return {
                     'currently_spent': 0,
@@ -192,12 +192,17 @@ def register_checkout(blueprint: Blueprint):
 
             # Spent amount for customer can not exist,
             # if customer spent nothing or sqs is delayed, for example.
+
             # We can use a tier's minimal amount to return a value close to real.
-            elastic = Elastic(
-                settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT,
-                settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT
-            )
-            row = elastic.get_data(customer.email.value)
+            # elastic = Elastic(
+            #     settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT,
+            #     settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT
+            # )
+            # row = elastic.get_data(customer.email.value)
+            dynamo_db = DynamoModel(settings.AWS_DYNAMODB_CMS_TABLE_NAME)
+            dynamo_db.PARTITION_KEY = 'PURCHASE_CUSTOMER_SPENT_AMOUNT'
+            row = dynamo_db.find_item(customer.email.value)
+
             customer_spent_amount = float(row['spent_amount'] or 0) if row else customer.tier.spent_amount_min
 
             current_tiers = list(tiers_storage.get_all())

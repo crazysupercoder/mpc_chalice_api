@@ -5,8 +5,7 @@ from chalice import Blueprint, UnprocessableEntityError, UnauthorizedError
 from chalicelib.extensions import *
 from chalicelib.settings import settings
 from chalicelib.libs.core.logger import Logger
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Id, Order
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.order.service import OrderAppService
 from chalicelib.libs.purchase.cart.service import CartAppService
@@ -93,7 +92,7 @@ def register_payment_methods_peach_mobicred(blueprint: Blueprint) -> None:
 
             def __log_flow(text: str) -> None:
                 logger.log_simple('Mobicred Payment Log for Order #{} : {}'.format(
-                    order.order_number.value,
+                    order.number.value,
                     text
                 ))
 
@@ -112,9 +111,9 @@ def register_payment_methods_peach_mobicred(blueprint: Blueprint) -> None:
                         'virtualAccount[password]': form.password,
                         'amount': '%.2f' % order.total_current_cost_ordered.value,
                         'currency': 'ZAR',
-                        'customParameters[order_number]': order.order_number.value,
+                        'customParameters[order_number]': order.number.value,
                         'shopperResultUrl': requests.utils.requote_uri(
-                            settings.FRONTEND_BASE_URL + '/order/confirmation/{}'.format(order.order_number.value)
+                            settings.FRONTEND_BASE_URL + '/order/confirmation/{}'.format(order.number.value)
                         ),
                     },
                     headers={
@@ -165,7 +164,7 @@ def register_payment_methods_peach_mobicred(blueprint: Blueprint) -> None:
             __log_flow('End')
 
             result = {
-                'order_number': order.order_number.value,
+                'order_number': order.number.value,
                 'url': response_data['redirect']['url'],
                 'method': 'POST',
                 'parameters': response_data['redirect']['parameters'],
@@ -208,7 +207,7 @@ def register_payment_methods_peach_mobicred(blueprint: Blueprint) -> None:
             raise UnprocessableEntityError('No orders - something wrong!')
 
         return {
-            'order_number': last_order.order_number.value
+            'order_number': last_order.number.value
         }
 
 # ----------------------------------------------------------------------------------------------------------------------

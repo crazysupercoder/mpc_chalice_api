@@ -2,6 +2,7 @@ from typing import List, Optional
 from chalicelib.settings import settings
 from chalicelib.extensions import *
 from ..base import DynamoModel, Base
+import hashlib
 
 
 class InformationAddress:
@@ -9,7 +10,7 @@ class InformationAddress:
     def __init__(self, **kwargs):
         kwargsdict = {}
         expected_args = [
-            "address_nickname", "recipient_name", "mobile_number",
+            "address_hash", "address_nickname", "recipient_name", "mobile_number",
             "business_name", "complex_building", "street_address",
             "suburb", "postal_code", "city",
             "province", "special_instructions", "business_type",
@@ -24,6 +25,7 @@ class InformationAddress:
                     kwargsdict[key] = False
                 else:
                     kwargsdict[key] = None
+
         self.__address_nickname= kwargsdict.get('address_nickname')
         self.__recipient_name = kwargsdict.get('recipient_name')
         self.__mobile_number = kwargsdict.get('mobile_number')
@@ -38,6 +40,11 @@ class InformationAddress:
         self.__business_type = kwargsdict.get('business_type')
         self.__is_default_billing = kwargsdict.get('is_default_billing')
         self.__is_default_shipping = kwargsdict.get('is_default_shipping')
+
+        if  kwargsdict.get('address_hash'):
+            self.__address_hash = kwargsdict.get('address_hash')
+        else:
+            self.__address_hash = hashlib.md5(str(self.__dict__).encode('utf-8')).hexdigest()
 
     @property
     def address_nickname(self):
@@ -132,7 +139,7 @@ class InformationAddress:
         return self.__business_type
 
     @business_type.setter
-    def business_type(self, value: str):
+    def business_type(self, value: bool):
         self.__business_type = value
 
     @property
@@ -140,7 +147,7 @@ class InformationAddress:
         return self.__is_default_billing
 
     @is_default_billing.setter
-    def is_default_billing(self, value: str):
+    def is_default_billing(self, value: bool):
         self.__is_default_billing = value
 
     @property
@@ -148,25 +155,34 @@ class InformationAddress:
         return self.__is_default_shipping
 
     @is_default_shipping.setter
-    def is_default_shipping(self, value: str):
+    def is_default_shipping(self, value: bool):
         self.__is_default_shipping = value
+
+    @property
+    def address_hash(self) -> str:
+        return self.__address_hash
+
+    @address_hash.setter
+    def address_hash(self, value: str):
+        self.__address_hash = value
 
     def to_dict(self):
         return {
-                'address_nickname': self.address_nickname,
-                'recipient_name': self.recipient_name,
-                'mobile_number': self.mobile_number,
-                'business_name': self.business_name,
-                'complex_building': self.complex_building,
-                'street_address': self.street_address,
-                'suburb': self.suburb,
-                'postal_code': self.postal_code,
-                'city': self.city,
-                'province': self.province,
-                'special_instructions': self.special_instructions,
+                'address_hash': self.__address_hash,
+                'address_nickname': self.__address_nickname,
+                'recipient_name': self.__recipient_name,
+                'mobile_number': self.__mobile_number,
+                'business_name': self.__business_name,
+                'complex_building': self.__complex_building,
+                'street_address': self.__street_address,
+                'suburb': self.__suburb,
+                'postal_code': self.__postal_code,
+                'city': self.__city,
+                'province': self.__province,
+                'special_instructions': self.__special_instructions,
                 'business_type': self.business_type,
-                'is_default_billing': self.is_default_billing,
-                'is_default_shipping': self.is_default_shipping
+                'is_default_billing': self.__is_default_billing,
+                'is_default_shipping': self.__is_default_shipping
             }
 
 class IdentificationNumber(object):
@@ -209,12 +225,12 @@ class Information:
         if identification_number is not None and not isinstance(identification_number, IdentificationNumber):
             raise ArgumentTypeException(self.__init__, 'identification_number', identification_number)
 
-        self.first_name = first_name
-        self.last_name = last_name
-        self.email = email
-        self.gender = gender
-        self.addresses = addresses
-        self.customer_id = customer_id
+        self.__first_name = first_name
+        self.__last_name = last_name
+        self.__email = email
+        self.__gender = gender
+        self.__addresses = [InformationAddress(**address) for address in addresses] if addresses is not None else []
+        self.__customer_id = customer_id
         self.__identification_number = identification_number
 
     @property
@@ -236,13 +252,53 @@ class Information:
     def addresses(self, value: List[dict]):
         self.__addresses = [InformationAddress(**address) for address in value] if value is not None else []
 
+    @property
+    def email(self):
+        return self.__email
+
+    @email.setter
+    def email(self, value):
+        self.__email = value
+
+    @property
+    def first_name(self):
+        return self.__first_name
+
+    @first_name.setter
+    def first_name(self, value):
+        self.__first_name = value
+
+    @property
+    def last_name(self):
+        return self.__last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        self.__last_name = value
+
+    @property
+    def gender(self):
+        return self.__gender
+
+    @gender.setter
+    def gender(self, value):
+        self.__gender = value
+
+    @property
+    def customer_id(self):
+        return self.__customer_id
+
+    @customer_id.setter
+    def customer_id(self, value):
+        self.__customer_id = value
+
     def to_dict(self):
         return {
-            "email": self.email,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "gender": self.gender,
-            "addresses": [address.to_dict() for address in self.addresses] if self.addresses is not None else None,
+            "email": self.__email,
+            "first_name": self.__first_name,
+            "last_name": self.__last_name,
+            "gender": self.__gender,
+            "addresses": [address.to_dict() for address in self.__addresses] if self.__addresses is not None else None,
             'identification_number': self.__identification_number.value if self.__identification_number else None,
         }
 
@@ -307,15 +363,23 @@ class InformationModel(DynamoModel):
 
     def get_information(self) -> Information:
         item = super(InformationModel, self).get_item(self.INFORMATIONS_SK).get('Item', {})
+        addresses = item.get('addresses', [])
+        flag = False
+        for address in addresses:
+            if address.get('address_hash') is None:
+                address['address_hash'] = hashlib.md5(str(address).encode('utf-8')).hexdigest()
+                flag = True
         instance = Information(
             item.get('first_name'),
             item.get('last_name'),
             item.get('email'),
             item.get('gender'),
-            item.get('addresses'),
+            addresses,
             self.__customer_id,
             IdentificationNumber(item.get('identification_number')) if item.get('identification_number') else None
         )
+        if flag == True:
+            self.insert_item(instance)
         return instance
 
     def add_address_attribute(self):
@@ -344,8 +408,11 @@ class InformationModel(DynamoModel):
 
         for k in range(len(addresses)):
             isExist = False
+            address_hash = addresses[k].get('address_hash')
+            if address_hash is None:
+                addresses[k]['address_hash'] = hashlib.md5(str(addresses[k]).encode('utf-8')).hexdigest()
             for i in range(len(old_addresses)):
-                if old_addresses[i]['address_nickname'] == addresses[k]['address_nickname']:
+                if old_addresses[i]['address_hash'] == addresses[k]['address_hash']:
                     update_dict[str(i)]=k
                     isExist = True
                     break
@@ -385,6 +452,9 @@ class InformationModel(DynamoModel):
         return result
 
     def add_address(self, address):
+        address_hash = address.get('address_hash')
+        if address_hash is None:
+            address['address_hash'] = hashlib.md5(str(address).encode('utf-8')).hexdigest()
         old_addresses = self.get_item()['addresses']
         if old_addresses is None:
             self.add_address_attribute()
@@ -394,7 +464,7 @@ class InformationModel(DynamoModel):
             address['is_default_shipping']=True#if addresses is empty, new address should be default shipping address.
         index = -1
         for i in range(len(old_addresses)):
-            if old_addresses[i]['address_nickname'] == address['address_nickname']:
+            if old_addresses[i]['address_hash'] == address['address_hash']:
                 index = i
                 break
         if index == -1:
@@ -429,17 +499,17 @@ class InformationModel(DynamoModel):
 
         return result  
 
-    def get_address(self, address_nickname):
+    def get_address(self, address_hash):
         addresses = self.get_item()['addresses']
         for item in addresses:
-            if item['address_nickname'] == address_nickname:
+            if item['address_hash'] == address_hash:
                 return item
-        raise ValueError('no exist')
+        raise Exception('There is no address.')
 
-    def delete_address(self, address_nickname):
+    def delete_address(self, address_hash):
         addresses = self.get_item()['addresses']
         for index in range(len(addresses)):
-            if addresses[index]['address_nickname'] == address_nickname:
+            if addresses[index]['address_hash'] == address_hash:
                 query = "REMOVE addresses[%d]" % (index)
                 result = self.table.update_item(
                     Key={
@@ -453,7 +523,7 @@ class InformationModel(DynamoModel):
                 if addresses[index]['is_default_shipping']:
                     self.__reset_default_shipping(0) #if default billing address was removed, the first address is set as default billing address
                 return result
-        raise ValueError('no exist')
+        raise Exception('There is no address.')
 
     def __reset_default_billing(self, index):
         addresses = self.get_item()['addresses']
@@ -524,17 +594,26 @@ class InformationService(Base):
             ":skValue": "USER_INFORMATIONS",
             ":emailValue": email
         }
-        items = self.table.scan(
+        response = self.table.scan(
             FilterExpression = filterExpression,
             ExpressionAttributeValues = expressionAttributeValues
         )
+        data = response['Items']
 
-        if items.get('Count') == 0:
-            raise ValueError('There is no items') 
-        pk = str(items.get('Items')[0].get('pk', ''))
+        while 'LastEvaluatedKey' in response:
+            response = self.table.scan(
+                FilterExpression = filterExpression,
+                ExpressionAttributeValues = expressionAttributeValues,
+                ExclusiveStartKey=response['LastEvaluatedKey']
+            )
+            data.extend(response['Items'])
+
+        if len(data) == 0:
+            raise Exception('There is no items') 
+        pk = str(data[0].get('pk', ''))
         customer_id = pk.replace('PROFILE#', '')
         if not customer_id:
-            raise ValueError('customer_id is invalid') 
+            raise Exception('customer_id is invalid') 
         information_model = InformationModel(customer_id)
         return information_model
 

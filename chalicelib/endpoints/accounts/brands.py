@@ -2,6 +2,7 @@ from typing import List
 from urllib.parse import unquote
 from ...libs.core.chalice.request import MPCRequest
 from ...libs.models.mpc.user import User
+from chalicelib.libs.models.ml.scored_products import ScoredProduct
 from ...libs.models.ml.products import Product
 
 
@@ -30,13 +31,12 @@ def register_brands(blue_print):
 
     @blue_print.route('/brands/popular', methods=['GET'], cors=True)
     def brands() -> List[dict]:
-        product_model = Product()
-        request = __get_request()
+        request: MPCRequest = __get_request()
         user = request.current_user
 
-        brands = product_model.get_top_brands(
+        brands = ScoredProduct().get_top_brands(
+            user.id, exclude=user.profile.brands,
             page=request.page, size=request.size,
-            exclude=user.profile.brands
         )
         return brands
 

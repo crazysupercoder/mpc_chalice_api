@@ -8,8 +8,7 @@ from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
 from chalicelib.libs.core.mailer import MailerImplementation
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.models.mpc.user import User
-from chalicelib.libs.purchase.core.order import Order
-from chalicelib.libs.purchase.core.values import Id
+from chalicelib.libs.purchase.core import Order, Id
 from chalicelib.libs.purchase.checkout.storage import CheckoutStorageImplementation
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.payment_methods.regular_eft.payment import RegularEftOrderPaymentMethod
@@ -55,7 +54,7 @@ def register_payment_methods_regular_eft(blueprint: Blueprint) -> None:
             order = order_app_service.get_waiting_for_payment_by_checkout_or_checkout_new(user.id)
 
             def __log_order_flow(text: str) -> None:
-                logger.log_simple('Regular EFT : Checkout : {} : {}'.format(order.order_number.value, text))
+                logger.log_simple('Regular EFT : Checkout : {} : {}'.format(order.number.value, text))
 
             __log_order_flow('Start')
 
@@ -67,7 +66,7 @@ def register_payment_methods_regular_eft(blueprint: Blueprint) -> None:
             if order.credit_spent_amount.value > 0:
                 __log_order_flow('Spending Credits...')
                 """"""
-                from chalicelib.libs.purchase.core.checkout import Checkout
+                from chalicelib.libs.purchase.core import Checkout
                 see = Checkout.__init__
                 """"""
                 # @TODO : refactoring : raw data usage
@@ -90,7 +89,7 @@ def register_payment_methods_regular_eft(blueprint: Blueprint) -> None:
                     "customer_id": order.customer_id.value,
                     "amount": -order.credit_spent_amount.value,
                     "changed_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "order_number": order.order_number.value,
+                    "order_number": order.number.value,
                 })
                 __log_order_flow('Spending Credits: Done!')
 
@@ -141,7 +140,7 @@ def register_payment_methods_regular_eft(blueprint: Blueprint) -> None:
             __log_order_flow('Checkout Not Flushed because of Error: {}'.format(str(e)))
 
         return {
-            'order_number': order.order_number.value
+            'order_number': order.number.value
         }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -244,7 +243,7 @@ def register_payment_methods_regular_eft(blueprint: Blueprint) -> None:
                 raise HttpNotFoundException('File does not exist!')
 
             def __log_flow(text: str) -> None:
-                logger.log_simple('Regular EFT : Sending POP : {} : {}'.format(order.order_number.value, text))
+                logger.log_simple('Regular EFT : Sending POP : {} : {}'.format(order.number.value, text))
 
             __log_flow('Order Updating...')
             order.status = Order.Status(Order.Status.PAYMENT_SENT)

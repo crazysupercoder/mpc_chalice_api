@@ -1,4 +1,4 @@
-from chalicelib.libs.purchase.core.returns import ReturnRequest
+from chalicelib.libs.purchase.core import ReturnRequest
 
 
 class HandDeliveryMethod(ReturnRequest.DeliveryMethod):

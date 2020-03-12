@@ -11,7 +11,7 @@ from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderIn
 # ----------------------------------------------------------------------------------------------------------------------
 
 # @todo : this is a "crutch" to use the same code for both modules. Needs to be refactored.
-from chalicelib.libs.purchase.core.values import Id as _Id, Email as _Email
+from chalicelib.libs.purchase.core import Id as _Id, Email as _Email
 
 
 class Id(object):

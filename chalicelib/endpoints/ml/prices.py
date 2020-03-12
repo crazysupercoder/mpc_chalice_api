@@ -2,12 +2,6 @@ from ...libs.models.ml.products import Product
 
 
 def register_prices(blue_print):
-    # @blue_print.route('/prices', cors=True)
-    # def prices():
-    #     response = get_price_recommendations()
-    #     return response
-
-
     @blue_print.route('/shop_by_price', cors=True)
     def shop_by_price():
         product = Product()

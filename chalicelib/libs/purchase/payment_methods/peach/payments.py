@@ -1,5 +1,5 @@
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Order
 
 
 class _PeachPaymentMethod(Order.PaymentMethodAbstract):

@@ -11,9 +11,13 @@ def suggest(query):
         raise BadRequestError('"query" length must be >= 3!')
 
     # @todo : update criteria and use it
-    products = Product().listByCustomFilter({
-        'search_query': query
-    }, [{"_score": {"order": "asc"}}], 1, 10000).get('products')
+    products = Product().listByCustomFilter(
+        {'search_query': query},
+        {"_score": "asc"},
+        blueprint.current_request.current_user.profile.tier,
+        1,
+        10000
+    ).get('products')
 
     return {
         'query': query,

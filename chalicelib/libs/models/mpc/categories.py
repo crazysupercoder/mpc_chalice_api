@@ -3,9 +3,7 @@ from chalicelib.extensions import *
 from boto3.dynamodb.conditions import Key
 from chalicelib.libs.models.mpc.base import DynamoModel
 from chalicelib.settings import settings
-from chalicelib.libs.core.personalize import ProductTypePersonalize
 from chalicelib.libs.models.ml.products import Product
-from chalicelib.libs.models.mpc.product_types import ProductType
 
 
 class CategoryGender(object):
@@ -218,9 +216,8 @@ class Category(DynamoModel):
             ])
         )
 
-    def get_categories_by_gender(
-            self, gender, customer_id='BLANK',
-            user_defined_product_types=[], **kwargs) -> List[dict]:
+    def get_by_gender(
+            self, gender: str, **kwargs) -> List[dict]:
         """Get categories for a given gender
         - gender: string, default is unisex
         - customer_id: customer's email address to be used in personalize
@@ -228,15 +225,7 @@ class Category(DynamoModel):
         if gender is None or gender.lower() == 'unisex':
             gender = 'ladies'
 
-        product_type_model = ProductType()
-        user_defined_product_type_ids = [
-            item['sk'] for item in product_type_model.filter_by_product_type_name(
-                user_defined_product_types)]
         categories = self.filter_by_field_value('gender_name', gender.upper())
-        product_type_ids = ProductTypePersonalize.get_personalized_ranking(
-            [str(int(item['product_type_id'])) for item in categories], customer_id,
-            user_defined=user_defined_product_type_ids)
-        categories = sorted(categories, key=lambda x: product_type_ids.index(str(int(x['product_type_id']))))
         return categories
 
     def get_categories(

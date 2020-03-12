@@ -7,7 +7,7 @@ from chalicelib.extensions import *
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class BaseSimpleValueObject(object):
+class _BaseSimpleValueObject(object):
     def __init__(self, value):
         self.__value = value
 
@@ -28,7 +28,7 @@ class BaseSimpleValueObject(object):
         return self.__value
 
 
-class BaseStringSimpleValueObject(BaseSimpleValueObject):
+class _BaseStringSimpleValueObject(_BaseSimpleValueObject):
     def __init__(self, value: str):
         if not isinstance(value, str):
             raise ArgumentTypeException(self.__init__, 'value', value)
@@ -36,7 +36,7 @@ class BaseStringSimpleValueObject(BaseSimpleValueObject):
         super().__init__(value)
 
 
-class BaseNumberSimpleValueObject(BaseSimpleValueObject):
+class _BaseNumberSimpleValueObject(_BaseSimpleValueObject):
     def __init__(self, value: Union[int, float]):
         if not isinstance(value, int) and not isinstance(value, float):
             raise ArgumentTypeException(self.__init__, 'value', value)
@@ -98,7 +98,7 @@ class BaseNumberSimpleValueObject(BaseSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Id(BaseStringSimpleValueObject):
+class Id(_BaseStringSimpleValueObject):
     def __init__(self, value: str) -> None:
         if not str(value).strip():
             raise ArgumentCannotBeEmptyException(self.__init__, 'value')
@@ -113,7 +113,7 @@ class Id(BaseStringSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Email(BaseStringSimpleValueObject):
+class Email(_BaseStringSimpleValueObject):
     def __init__(self, value: str) -> None:
         if not str(value).strip():
             raise ArgumentCannotBeEmptyException(self.__init__, 'value')
@@ -136,7 +136,7 @@ class Email(BaseStringSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Name(BaseStringSimpleValueObject):
+class Name(_BaseStringSimpleValueObject):
     def __init__(self, value: str) -> None:
         if not str(value).strip():
             raise ArgumentCannotBeEmptyException(self.__init__, 'value')
@@ -151,7 +151,7 @@ class Name(BaseStringSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Description(BaseSimpleValueObject):
+class Description(_BaseSimpleValueObject):
     def __init__(self, value: Optional[str]) -> None:
         if value is None:
             super().__init__(value)
@@ -173,7 +173,7 @@ class Description(BaseSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Percentage(BaseNumberSimpleValueObject):
+class Percentage(_BaseNumberSimpleValueObject):
     def __init__(self, value: Union[float, int]) -> None:
         value = float(str(value))
         if value < 0 or value > 100:
@@ -190,7 +190,7 @@ class Percentage(BaseNumberSimpleValueObject):
 
 
 # @todo : move to product
-class EventCode(BaseStringSimpleValueObject):
+class EventCode(_BaseStringSimpleValueObject):
     def __init__(self, value: str) -> None:
         if not str(value).strip():
             raise ArgumentCannotBeEmptyException(self.__init__, 'value')
@@ -207,7 +207,7 @@ class EventCode(BaseStringSimpleValueObject):
 
 
 # @todo : move to product
-class SimpleSku(BaseStringSimpleValueObject):
+class SimpleSku(_BaseStringSimpleValueObject):
     def __init__(self, value: str) -> None:
         if not str(value).strip():
             raise ArgumentCannotBeEmptyException(self.__init__, 'value')
@@ -223,7 +223,7 @@ class SimpleSku(BaseStringSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Qty(BaseNumberSimpleValueObject):
+class Qty(_BaseNumberSimpleValueObject):
     def __init__(self, value: int) -> None:
         value = int(str(value))
         if value < 0:
@@ -241,7 +241,7 @@ class Qty(BaseNumberSimpleValueObject):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Cost(BaseNumberSimpleValueObject):
+class Cost(_BaseNumberSimpleValueObject):
     def __init__(self, value: Union[int, float, str]) -> None:
         value = float(str(value))
         if value < 0:

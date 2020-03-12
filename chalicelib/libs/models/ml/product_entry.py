@@ -1,12 +1,15 @@
 import math
 import random
+from warnings import warn
 from datetime import datetime, timedelta
-from typing import List, Union
+from typing import List, Union, Optional
 from decimal import Decimal
 from chalicelib.settings import settings
 from chalicelib.libs.models.mpc.Cms.UserQuestions import UserQuestionEntity as Question
+from chalicelib.libs.core.datetime import DATETIME_FORMAT
+from .questions import Answer
 from .weights import ScoringWeight
-from .demo_orders import OrderAggregation
+from .orders import OrderAggregation
 from .tracks import UserTrackEntry
 
 
@@ -73,6 +76,11 @@ class ProductImage:
         }
 
 
+class PercentageScoreRange:
+    max_score: float = -float('inf')
+    min_score: float = float('inf')
+
+
 class ProductEntry(object):
     portal_config_id: int
     event_code: str
@@ -103,8 +111,6 @@ class ProductEntry(object):
     img: dict
     brand_code: str
     __weights_version: int = None
-    __personalize_score: int = 0
-    __personalize_weight: float = 1.0
     __questions_score: int = 0
     __questions_weight: float = 1.0
     __orders_score: int = 0
@@ -115,15 +121,9 @@ class ProductEntry(object):
     views: int = 0
     clicks: int = 0
     visits: int = 0
-    viewed_at: datetime = None
+    __viewed_at: datetime = None
 
-    @property
-    def personalize_score(self):
-        return self.__personalize_score
-
-    @personalize_score.setter
-    def personalize_score(self, value: Union[int, float, str]):
-        self.__personalize_score = int(value)
+    score_range: PercentageScoreRange = None
 
     @property
     def question_score(self):
@@ -179,7 +179,6 @@ class ProductEntry(object):
             images: List[dict]=[],
             img: dict=None,
             brand_code: str=None,
-            personalize_score: float = None,
             question_score: float = None,
             order_score: float = None,
             tracking_score: float = None,
@@ -217,6 +216,19 @@ class ProductEntry(object):
         self.images = [ProductImage(image) for image in images]
         self.img = img
         self.brand_code = brand_code
+        if viewed_at:
+            if isinstance(viewed_at, str):
+                self.viewed_at = datetime.strptime(viewed_at, DATETIME_FORMAT)
+            elif isinstance(viewed_at, datetime):
+                self.viewed_at = viewed_at
+
+    @property
+    def viewed_at(self) -> datetime:
+        return self.__viewed_at
+
+    @viewed_at.setter
+    def viewed_at(self, value: Optional[datetime]):
+        self.__viewed_at = value
 
     @property
     def original_price(self) -> float:
@@ -301,29 +313,22 @@ class ProductEntry(object):
                 "brand_code": self.brand_code,
                 "original_price": self.original_price,
                 "current_price": self.current_price,
-                "personalize_score": self.personalize_score,
                 "question_score": self.question_score,
                 "order_score": self.order_score,
                 "tracking_score": self.tracking_score,
+                "total_score": self.total_score,
+                "percentage_score": self.percentage_score,
                 "tracking_info": {
                     "views": self.views,
                     "clicks": self.clicks,
                     "visits": self.visits,
                 },
+                "viewed_at": self.viewed_at.strftime(DATETIME_FORMAT)
+                    if isinstance(self.viewed_at, datetime)
+                    else (self.viewed_at 
+                        if isinstance(self.viewed_at, str)
+                        else None),
                 "is_seen": (self.views > 0 or self.clicks > 0 or self.visits > 0),
-            }
-        elif mode == 'cache':
-            return {
-                'rs_sku': self.rs_sku,
-                'ps': self.personalize_score,
-                'pw': self.__personalize_weight,
-                'qs': self.question_score,
-                'qw': self.__questions_weight,
-                'rs': self.order_score,
-                'rw': self.__orders_weight,
-                'ts': self.tracking_score,
-                'tw': self.__tracking_weight,
-                'total': self.total_score,
             }
         else:
             image_src = None
@@ -348,8 +353,6 @@ class ProductEntry(object):
                 'brand': self.manufacturer,
                 'scores': {
                     'version': self.__weights_version,
-                    'ps': self.personalize_score,
-                    'pw': self.__personalize_weight,
                     'qs': self.question_score,
                     'qw': self.__questions_weight,
                     'rs': self.order_score,
@@ -357,6 +360,7 @@ class ProductEntry(object):
                     'ts': self.tracking_score,
                     'tw': self.__tracking_weight,
                     'total': self.total_score,
+                    'percentage_score': self.percentage_score,
                 },
                 # 'score': self.total_score,
                 'sizes': [
@@ -383,28 +387,46 @@ class ProductEntry(object):
                 item['fbucks'] = math.ceil(item['price'] * tier.get('discount_rate') / 100)
             return item
 
-    def apply_questions(self, questions: List[Question]):
-        for question in questions:
-            target_attr: str = question.target_attr
-            answers: List[str] = question.answers
+    def __check_attribute(self, attr_name: str, values: List[str]):
+        if not isinstance(values, list):
+            values = [values]
+        if attr_name == 'sizes':
+            for size in self.sizes:
+                if size.size in values:
+                    return True
+            else:
+                return False
+        else:
+            return str(getattr(self, attr_name)).lower() in [
+                str(value).lower() for value in values if value]
+
+    def apply_questions(self, answers: List[Answer]):
+        for answer in answers:
+            # target_attr: str = question.target_attr
+            # answers: List[str] = question.answers
             if not isinstance(answers, list):
                 answers = [answers]
 
-            # TODO: How can we improve this kind of stuff?
-            if isinstance(target_attr, str) and target_attr.lower() == 'gender':
-                gender_maps = {
-                    'male': 'MENS',
-                    'mens': 'MENS',
-                    'women': 'LADIES',
-                    'female': 'LADIES',}
-                answers = [gender_maps.get(str(answer).lower()) for answer in answers]
-            if not hasattr(self, target_attr):
-                raise Exception("Unknown attr - %s found." % target_attr)
-            if str(getattr(self, target_attr)).lower() in [
-                    answer.lower() for answer in answers]:
-                self.question_score += question.question_score
+            for query in answer.queries:
+                for key, values in query.items():
+                    if not hasattr(self, key):
+                        print("Unknown attr - %s found." % key)
+                        # raise Exception("Unknown attr - %s found." % key)
+
+                    if not self.__check_attribute(key, values):
+                        break
+                else:
+                    self.question_score += answer.question_score
+                    break
             else:
-                self.question_score -= question.question_score
+                self.question_score -= answer.question_score
+            # if not hasattr(self, target_attr):
+            #     raise Exception("Unknown attr - %s found." % target_attr)
+            # if str(getattr(self, target_attr)).lower() in [
+            #         answer.lower() for answer in answers]:
+            #     self.question_score += question.question_score
+            # else:
+            #     self.question_score -= question.question_score
 
     def apply_orders(self, orders: OrderAggregation):
         if self.gender.lower() in orders.genders:
@@ -476,15 +498,25 @@ class ProductEntry(object):
     @property
     def total_score(self):
         return sum([
-            self.personalize_score * self.__personalize_weight,
             self.question_score * self.__questions_weight,
             self.order_score * self.__orders_weight,
             self.tracking_score * self.__tracking_weight
         ])
 
+    @property
+    def percentage_score(self) -> float:
+        if not isinstance(self.score_range, PercentageScoreRange):
+            return 0
+        elif self.score_range.min_score == self.score_range.max_score:
+            warn("Unexpected case found here. MAX == MIN in score range")
+            return 0
+        else:
+            return float("%.2f" % (
+                (self.total_score - self.score_range.min_score) * 100 / (
+                self.score_range.max_score - self.score_range.min_score)))
+
     def set_weights(self, weights: ScoringWeight):
         self.__weights_version = weights.version
-        self.__personalize_weight = weights.personalize
         self.__questions_weight = weights.question
         self.__orders_weight = weights.order
         self.__tracking_weight = weights.track
@@ -493,13 +525,11 @@ class ProductEntry(object):
             self,
             weights: ScoringWeight = None,
             version: int = None,
-            pw: float = 1.0,
             qw: float = 1.0,
             ow: float = 1.0,
             tw: float = 1.0):
         if weights is None:
             self.__weights_version = version
-            self.__personalize_weight = pw
             self.__questions_weight = qw
             self.__orders_weight = ow
             self.__tracking_weight = tw
@@ -508,7 +538,6 @@ class ProductEntry(object):
         else:
             raise Exception("Unexpected case found.")
         return sum([
-            self.personalize_score * pw,
             self.question_score * qw,
             self.order_score * ow,
             self.tracking_score * tw

@@ -2,8 +2,7 @@ import math
 from typing import Tuple
 from chalice import Blueprint
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.cart import CartItem
+from chalicelib.libs.purchase.core import Id, Cart
 from chalicelib.libs.purchase.cart.storage import CartStorageImplementation
 from chalicelib.libs.purchase.cart.service import CartAppService
 from chalicelib.libs.purchase.order.dtd_calculator import DtdCalculatorImplementation
@@ -11,17 +10,18 @@ from chalicelib.libs.models.mpc.Product import Product as MpcProduct
 
 
 def register_cart(blueprint: Blueprint) -> None:
-    def __get_session_id() -> str:
-        return blueprint.current_request.current_user.session_id
+    def __get_cart_id() -> str:
+        if blueprint.current_request.current_user.is_anyonimous:
+            return blueprint.current_request.current_user.session_id
 
-    def __response_cart(session_id) -> dict:
+        return blueprint.current_request.current_user.id
+
+    def __response_cart(cart_id) -> dict:
         cart_storage = CartStorageImplementation()
         dtd_calculator = DtdCalculatorImplementation()
 
-        # @todo : if user is authenticated, return data from checkout ???
-
         def __return(
-            cart_items: Tuple[CartItem],
+            cart_items: Tuple[Cart.Item],
             original_subtotal: float,
             current_subtotal: float,
             current_subtotal_vat_amount: float
@@ -92,8 +92,8 @@ def register_cart(blueprint: Blueprint) -> None:
                 'available_fbucks_amount': available_fbucks_amount,
             }
 
-        cart_id = Id(session_id)
-        cart = cart_storage.load(cart_id)
+        cart_id = Id(cart_id)
+        cart = cart_storage.get_by_id(cart_id)
         return __return(
             cart.items if cart else tuple(),
             cart.original_subtotal.value if cart else 0.0,
@@ -106,10 +106,10 @@ def register_cart(blueprint: Blueprint) -> None:
     # ------------------------------------------------------------------------------------------------------------------
 
     @blueprint.route('/cart/view', methods=['GET'], cors=True)
-    def cart_list():
+    def cart_view():
         try:
-            session_id = __get_session_id()
-            return __response_cart(session_id)
+            cart_id = __get_cart_id()
+            return __response_cart(cart_id)
         except BaseException as e:
             return http_response_exception_or_throw(e)
 
@@ -130,9 +130,9 @@ def register_cart(blueprint: Blueprint) -> None:
             if not simple_sku or not qty:
                 raise HttpIncorrectInputDataException()
 
-            session_id = __get_session_id()
-            cart_app_service.add_cart_product(session_id, simple_sku, qty)
-            return __response_cart(session_id)
+            cart_id = __get_cart_id()
+            cart_app_service.add_cart_product(cart_id, simple_sku, qty)
+            return __response_cart(cart_id)
         except BaseException as e:
             return http_response_exception_or_throw(e)
 
@@ -152,13 +152,13 @@ def register_cart(blueprint: Blueprint) -> None:
             if not simple_sku or qty < 0:
                 raise HttpIncorrectInputDataException()
 
-            session_id = __get_session_id()
+            cart_id = __get_cart_id()
             if qty == 0:
-                cart_app_service.remove_cart_product(session_id, simple_sku)
+                cart_app_service.remove_cart_product(cart_id, simple_sku)
             else:
-                cart_app_service.set_cart_product_qty(session_id, simple_sku, qty)
+                cart_app_service.set_cart_product_qty(cart_id, simple_sku, qty)
 
-            return __response_cart(session_id)
+            return __response_cart(cart_id)
         except BaseException as e:
             return http_response_exception_or_throw(e)
 
@@ -177,9 +177,9 @@ def register_cart(blueprint: Blueprint) -> None:
             if not simple_sku:
                 raise HttpIncorrectInputDataException()
 
-            session_id = __get_session_id()
-            cart_app_service.remove_cart_product(session_id, simple_sku)
-            return __response_cart(session_id)
+            cart_id = __get_cart_id()
+            cart_app_service.remove_cart_product(cart_id, simple_sku)
+            return __response_cart(cart_id)
         except BaseException as e:
             return http_response_exception_or_throw(e)
 

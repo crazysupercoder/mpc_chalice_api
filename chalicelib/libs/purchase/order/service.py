@@ -2,13 +2,14 @@ from chalicelib.extensions import *
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.core.mailer import MailerInterface
 from chalicelib.libs.core.sqs_sender import SqsSenderInterface
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.product import ProductStorageInterface
-from chalicelib.libs.purchase.core.checkout import Checkout, CheckoutStorageInterface
-from chalicelib.libs.purchase.core.customer import CustomerStorageInterface
-from chalicelib.libs.purchase.core.order import Order, OrderStorageInterface
-from chalicelib.libs.purchase.core.dtd import DtdCalculatorInterface
-from chalicelib.libs.purchase.core.purchase_service import PurchaseService
+from chalicelib.libs.purchase.core import \
+    Id, \
+    ProductStorageInterface, \
+    Checkout, CheckoutStorageInterface, \
+    CustomerStorageInterface,\
+    Order, OrderStorageInterface, \
+    DtdCalculatorInterface, \
+    PurchaseService
 from chalicelib.libs.purchase.order.sqs import OrderChangeSqsSenderEvent
 
 
@@ -92,24 +93,24 @@ class _OrderAppService(object):
             if is_waiting_for_payment and is_not_set_payment:
                 if self.__is_order_matched_checkout(existed_order, checkout):
                     order = existed_order
-                    __log_flow('Found Existed Order #{} matched with Checkout'.format(existed_order.order_number.value))
+                    __log_flow('Found Existed Order #{} matched with Checkout'.format(existed_order.number.value))
                     break
 
         if not order:
             # create order
             order = self.__purchase_service.purchase(checkout)
-            __log_flow('Created New Order #{}'.format(order.order_number.value))
+            __log_flow('Created New Order #{}'.format(order.number.value))
 
             # send to portal
             # Theoretically we can redo it again, if some error occurs during process.
             try:
-                __log_flow('New Order #{} SQS Sending...'.format(order.order_number.value))
+                __log_flow('New Order #{} SQS Sending...'.format(order.number.value))
                 event = OrderChangeSqsSenderEvent(order)
                 self.__sqs_sender.send(event)
-                __log_flow('New Order #{} SQS Sent!'.format(order.order_number.value))
+                __log_flow('New Order #{} SQS Sent!'.format(order.number.value))
             except BaseException as e:
                 self.__logger.log_exception(e)
-                __log_flow('New Order #{} SQS NOT Sent because of Error: {}!'.format(order.order_number.value, str(e)))
+                __log_flow('New Order #{} SQS NOT Sent because of Error: {}!'.format(order.number.value, str(e)))
 
         return order
 
@@ -132,7 +133,7 @@ class _OrderAppService(object):
             'items': [{
                 'sku': item.simple_sku.value,
                 'qty': item.qty_ordered.value,
-            } for item in order.order_items],
+            } for item in order.items],
             'delivery_address': order.delivery_address.address_hash,
             'total_cost': order.total_current_cost_ordered.value
         }).encode('utf-8')).hexdigest()

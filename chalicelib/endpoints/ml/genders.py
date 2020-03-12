@@ -1,4 +1,4 @@
-from ...libs.core.personalize import GenderPersonalize
+"""Endpoint for gender"""
 
 
 def register_gender(blue_print):
@@ -9,7 +9,3 @@ def register_gender(blue_print):
         return {
             "data": gender
         }
-
-    @blue_print.route('/gender/metrics', cors=True)
-    def gender_metrics():
-        return GenderPersonalize.get_metrics()

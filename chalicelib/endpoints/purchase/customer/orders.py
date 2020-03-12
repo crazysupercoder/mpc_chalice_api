@@ -1,8 +1,7 @@
 from typing import Union, Tuple, List
 from chalice import Blueprint
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Id, Order
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.models.mpc.Product import Product as MpcProducts
 
@@ -22,7 +21,7 @@ def register_customer_orders(blueprint: Blueprint) -> None:
 
         products_map = {}
         for order in orders:
-            for item in order.order_items:
+            for item in order.items:
                 products_map[item.simple_sku.value] = None
 
         _existed_products = products.getRawDataBySimpleSkus(tuple(products_map.keys()))
@@ -43,14 +42,14 @@ def register_customer_orders(blueprint: Blueprint) -> None:
             delivery_address = order.delivery_address
 
             order_items = []
-            for order_item in order.order_items:
+            for order_item in order.items:
                 product = products_map[order_item.simple_sku.value]
                 product_sizes = product.get('sizes', []) if product else tuple()
                 size = tuple(filter(lambda s: s.get('simple_sku') == order_item.simple_sku.value, product_sizes))[0]
 
                 item_fbucks = None
                 if not tier['is_neutral'] and not blueprint.current_request.current_user.is_anyonimous:
-                    item_fbucks = order_item.fbucks_amount.value
+                    item_fbucks = order_item.fbucks_earnings.value
 
                 order_items.append({
                     'sku': product['sku'],
@@ -78,7 +77,7 @@ def register_customer_orders(blueprint: Blueprint) -> None:
                 })
 
             response.append({
-                'order_number': order.order_number.value,
+                'order_number': order.number.value,
                 'order_items': order_items,
                 'delivery_address': {
                     'recipient_name': delivery_address.recipient_name,

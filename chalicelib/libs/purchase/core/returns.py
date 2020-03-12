@@ -200,6 +200,8 @@ class _Item(object):
 
         if not isinstance(qty, Qty):
             raise ArgumentTypeException(self.__init__, 'qty', qty)
+        elif qty.value == 0:
+            raise ArgumentValueException('{} cannot work with qty = 0'.format(self.__init__.__qualname__))
 
         if not isinstance(cost, Cost):
             raise ArgumentTypeException(self.__init__, 'cost', cost)

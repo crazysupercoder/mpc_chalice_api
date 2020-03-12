@@ -3,10 +3,7 @@ from chalicelib.extensions import *
 from chalicelib.utils.sqs_handlers.base import SqsMessage, SqsHandlerInterface
 from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderImplementation
 from chalicelib.libs.core.logger import Logger
-from chalicelib.libs.purchase.core.values import SimpleSku, Qty
-from chalicelib.libs.purchase.core.order import Order
-from chalicelib.libs.purchase.core.product import ProductInterface
-from chalicelib.libs.purchase.core.cancellations import CancelRequest
+from chalicelib.libs.purchase.core import SimpleSku, Qty, Order, ProductInterface, CancelRequest
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.order.sqs import OrderChangeSqsSenderEvent
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
@@ -35,6 +32,7 @@ class CancelRequestPaidOrderSqsSenderEvent(SqsSenderEventInterface):
 
         return {
             'request_number': request.number.value,
+            'requested_at': request.requested_at.strftime('%Y-%m-%d %H:%M:%S'),
             'order_number': request.order_number.value,
             'items': [{
                 'simple_sku': item.simple_sku.value,
@@ -187,7 +185,7 @@ class CancelRequestPaidOrderAnswerSqsHandler(SqsHandlerInterface):
         product: ProductInterface,
         status_label: str
     ) -> None:
-        customer = self.__customer_storage.load(order.customer_id)
+        customer = self.__customer_storage.get_by_id(order.customer_id)
         message = Message(
             str(uuid.uuid4()),
             customer.email.value,
@@ -254,7 +252,7 @@ class CancelledOrderOnPortalSideSqsHandle(SqsHandlerInterface):
 
         try:
             __log_flow('Notification popup: Adding...')
-            customer = self.__customer_storage.load(order.customer_id)
+            customer = self.__customer_storage.get_by_id(order.customer_id)
             message = Message(
                 str(uuid.uuid4()),
                 customer.email.value,

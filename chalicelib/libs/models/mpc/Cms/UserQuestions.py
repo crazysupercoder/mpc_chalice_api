@@ -317,20 +317,20 @@ class UserQuestionModel(DynamoModel):
 
     def __convert(self, questionEntity: UserQuestionEntity) -> dict:
         return {
-            # 'id': questionEntity.id,
+            'id': questionEntity.id,
             # 'type': questionEntity.type,
             'question': questionEntity.question,
-            # 'priority': questionEntity.priority,
+            'priority': questionEntity.priority,
             'attribute': {
                 'type': questionEntity.attribute_type,
                 'value': questionEntity.attribute_value,
             },
             'options': [{
-                # 'id': option.id,
+                'id': option.id,
                 # 'type': option.type,
                 'value': option.value,
                 'png_image': option.png_image,
-                # 'svg_image': option.svg_image,
+                'svg_image': option.svg_image,
                 # 'entity': option.entity,
                 # 'entity_id': option.entity_id,
                 # 'fixel_category': {
@@ -342,11 +342,11 @@ class UserQuestionModel(DynamoModel):
                 #     'name': option.brand_name
                 # },
                 'suboptions': [{
-                    # 'id': suboption.id,
+                    'id': suboption.id,
                     # 'type': suboption.type,
                     'value': suboption.value,
                     'png_image': suboption.png_image,
-                    # 'svg_image': suboption.svg_image,
+                    'svg_image': suboption.svg_image,
                     # 'entity': suboption.entity,
                     # 'entity_id': suboption.entity_id,
                     # 'fixel_category': {

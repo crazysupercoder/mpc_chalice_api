@@ -3,8 +3,9 @@ import datetime
 from typing import Optional
 from chalicelib.extensions import *
 from chalicelib.settings import Config
-from chalicelib.libs.purchase.core.dtd import Dtd, DtdCalculatorInterface
-from chalicelib.libs.purchase.core.values import SimpleSku, Qty, Name, Description
+from chalicelib.libs.purchase.core import \
+    Dtd, DtdCalculatorInterface, \
+    SimpleSku, Qty, Name, Description
 
 
 class _DtdApiCalculator(DtdCalculatorInterface):

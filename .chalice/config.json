@@ -6,8 +6,8 @@
     "production": {
       "api_gateway_stage": "api",
       "lambda_functions": {
-        "handle_sqs_message": {
-          "lambda_timeout": 30
+        "register_listener": {
+          "lambda_timeout": 120
         }
       },
       "environment_variables": {
@@ -37,50 +37,15 @@
 
         "AWS_COGNITO_USER_POOL_NAME": "mpc-chalice-api-user-pool",
         "AWS_COGNITO_USER_POOL_ID": "eu-west-1_ffPTD4QCK",
-        "AWS_COGNITO_USER_POOL_ARN": "arn:aws:cognito-idp:eu-west-1:254084358738:userpool/eu-west-1_ffPTD4QCK",
-
-        "AWS_PERSONALIZE_CONFIG_SKU_REGION": "eu-west-1",
-        "AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_CAMPAIGN_ARN": "mpc-config-sku-hrnn-campaign",
-        "AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-config-sku-hrnn-with-meta-solution/893fc1df",
-        "AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_CAMPAIGN_ARN": "mpc-config-sku-similar-items-campaign",
-        "AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_SOLUTION_VERSION_ARN": "mpc-config-sku-similar-items-solution/f41b3fd9",
-        "AWS_PERSONALIZE_CONFIG_SKU_RANKING_CAMPAIGN_ARN": "mpc-config-sku-personalized-ranking-campaign",
-        "AWS_PERSONALIZE_CONFIG_SKU_RANKING_SOLUTION_VERSION_ARN": "mpc-config-sku-personalized-ranking-solution/d74c315c",
-        "AWS_PERSONALIZE_CONFIG_SKU_TRACKING_ID": "db9eb3db-da6a-4736-9f37-742287c559da",
-
-        "AWS_PERSONALIZE_SIZE_REGION": "us-east-1",
-        "AWS_PERSONALIZE_SIZE_RECOMMEND_CAMPAIGN_ARN": "",
-        "AWS_PERSONALIZE_SIZE_RECOMMEND_SOLUTION_VERSION_ARN": "",
-        "AWS_PERSONALIZE_SIZE_RANKING_CAMPAIGN_ARN": "mpc-product-size-personalized-rank-campaign",
-        "AWS_PERSONALIZE_SIZE_TRACKING_ID": "ba0ddaac-a8ef-4fc9-8b4c-398e460af9e1",
-
-        "AWS_PERSONALIZE_BRAND_REGION": "eu-west-1",
-        "AWS_PERSONALIZE_BRAND_RECOMMEND_CAMPAIGN_ARN": "mpc-brands-hrnn-with-meta-campaign",
-        "AWS_PERSONALIZE_BRAND_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-brands-hrnn-with-meta/2df01501",
-        "AWS_PERSONALIZE_BRAND_TRACKING_ID": "dee2c6ee-8cb5-4671-b77d-2bb90cd09a21",
-
-        "AWS_PERSONALIZE_PRODUCT_TYPE_REGION": "us-east-1",
-        "AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_CAMPAIGN_ARN": "mpc-product-type-hrnn-campaign",
-        "AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-product-type-hrnn/aece4a09",
-        "AWS_PERSONALIZE_PRODUCT_TYPE_SIMILAR_ITEMS_CAMPAIGN_ARN": "mpc-product-type-similar-items-campaign",
-        "AWS_PERSONALIZE_PRODUCT_TYPE_RANKING_CAMPAIGN_ARN": "mpc-product-type-personalized-ranking-campaign",
-        "AWS_PERSONALIZE_PRODUCT_TYPE_TRACKING_ID": "0723edff-ac8a-4374-9c56-95518ed344cc",
-
-        "AWS_PERSONALIZE_PRICE_REGION": "",
-        "AWS_PERSONALIZE_PRICE_RECOMMEND_CAMPAIGN_ARN": "",
-
-        "AWS_PERSONALIZE_GENDER_REGION": "eu-west-1",
-        "AWS_PERSONALIZE_GENDER_RECOMMEND_CAMPAIGN_ARN": "mpc-gender-hrnn-cmp",
-        "AWS_PERSONALIZE_GENDER_RECOMMEND_SOLUTION_VERSION_ARN": "mpc-gender-hrnn-solution/2cd95e80",
-        "AWS_PERSONALIZE_GENDER_TRACKING_ID": "76c448dd-d8a3-4701-a89a-db9c61747c11"
+        "AWS_COGNITO_USER_POOL_ARN": "arn:aws:cognito-idp:eu-west-1:254084358738:userpool/eu-west-1_ffPTD4QCK"
       }
     },
 
     "dev": {
       "api_gateway_stage": "api",
       "lambda_functions": {
-        "handle_sqs_message": {
-          "lambda_timeout": 30
+        "register_listener": {
+          "lambda_timeout": 60
         }
       },
       "environment_variables": {
@@ -105,8 +70,8 @@
     "stage": {
       "api_gateway_stage": "stage",
       "lambda_functions": {
-        "handle_sqs_message": {
-          "lambda_timeout": 60
+        "register_listener": {
+          "lambda_timeout": 120
         }
       },
       "environment_variables": {

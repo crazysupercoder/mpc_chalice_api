@@ -1,6 +1,6 @@
 import math
 from chalicelib.extensions import *
-from .values import Qty
+from .values import Cost
 from .checkout import Checkout
 from .product import ProductStorageInterface
 from .order import Order, OrderStorageInterface
@@ -36,7 +36,7 @@ class PurchaseService(object):
         order = self.__create_order(checkout)
         self.__order_storage.save(order)
 
-        for order_item in order.order_items:
+        for order_item in order.items:
             product = self.__product_storage.load(order_item.simple_sku)
             product.sell_qty(order_item.qty_ordered)
             self.__product_storage.update(product)
@@ -63,7 +63,7 @@ class PurchaseService(object):
 
         credits_spent = checkout.credits_amount_in_use
 
-        customer = self.__customer_storage.load(customer_id)
+        customer = self.__customer_storage.get_by_id(customer_id)
 
         order_items = []
         for checkout_item in checkout.checkout_items:
@@ -74,7 +74,7 @@ class PurchaseService(object):
 
             fbucks_amount = checkout_item.product_current_price.value * customer.tier.credit_back_percent.value / 100
             fbucks_amount = math.ceil(fbucks_amount)
-            fbucks_amount = Qty(fbucks_amount)
+            fbucks_amount = Cost(fbucks_amount)
 
             order_item = Order.Item(
                 checkout_item.event_code,

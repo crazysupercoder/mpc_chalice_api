@@ -10,8 +10,7 @@ from chalicelib.extensions import *
 from chalicelib.settings import settings
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.models.mpc.user import User
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Id, Order
 from chalicelib.libs.purchase.payment_methods.peach.cards import CreditCard, CreditCardsStorageImplementation
 from chalicelib.libs.purchase.checkout.storage import CheckoutStorageImplementation
 from chalicelib.libs.purchase.order.service import OrderAppService
@@ -420,7 +419,7 @@ def register_payment_methods_peach_cards(blueprint: Blueprint) -> None:
             order = order_app_service.get_waiting_for_payment_by_checkout_or_checkout_new(user.id)
 
             def __log_flow(text: str) -> None:
-                logger.log_simple('Credit Cards : Checkout : {} : {}'.format(order.order_number.value, text))
+                logger.log_simple('Credit Cards : Checkout : {} : {}'.format(order.number.value, text))
 
             __log_flow('Start')
 
@@ -435,9 +434,9 @@ def register_payment_methods_peach_cards(blueprint: Blueprint) -> None:
                         'paymentType': 'DB',
                         'currency': 'ZAR',
                         'shopperResultUrl': requests.utils.requote_uri(
-                            settings.FRONTEND_BASE_URL + '/order/confirmation/{}'.format(order.order_number.value)
+                            settings.FRONTEND_BASE_URL + '/order/confirmation/{}'.format(order.number.value)
                         ),
-                        'customParameters[order_number]': order.order_number.value,
+                        'customParameters[order_number]': order.number.value,
                     },
                     headers={
                         'Authorization': 'Bearer {}'.format(settings.PEACH_PAYMENT_ACCESS_TOKEN)
@@ -484,7 +483,7 @@ def register_payment_methods_peach_cards(blueprint: Blueprint) -> None:
                 __log_flow('Checkout is NOT Flushed because of Error: {}'.format(str(e)))
 
             result = {
-                'order_number': order.order_number.value,
+                'order_number': order.number.value,
                 'url': response_data['redirect']['url'],
                 'method': 'POST',
                 'parameters': [{
@@ -527,7 +526,7 @@ def register_payment_methods_peach_cards(blueprint: Blueprint) -> None:
                 raise UnprocessableEntityError('No orders - something wrong!')
 
             return {
-                'order_number': last_order.order_number.value
+                'order_number': last_order.number.value
             }
 
         except BaseException as e:

@@ -2,8 +2,7 @@ from chalice import Blueprint
 from chalicelib.extensions import *
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.models.mpc.user import User
-from chalicelib.libs.purchase.core.order import Order
-from chalicelib.libs.purchase.core.values import Id
+from chalicelib.libs.purchase.core import Order, Id
 from chalicelib.libs.purchase.checkout.storage import CheckoutStorageImplementation
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.payment_methods.customer_credits import CustomerCreditsOrderPaymentMethod
@@ -50,7 +49,7 @@ def register_payment_methods_customer_credits(blueprint: Blueprint) -> None:
 
             def __log_flow(text: str) -> None:
                 logger.log_simple('Customer Credits Payment Log for Order #{} : {}'.format(
-                    order.order_number.value,
+                    order.number.value,
                     text
                 ))
 
@@ -64,7 +63,7 @@ def register_payment_methods_customer_credits(blueprint: Blueprint) -> None:
                 # @todo : copy-paste code
                 # @todo : when reservation of credits amount will be done, perhaps, use sqs to spend credits
                 """"""
-                from chalicelib.libs.purchase.core.checkout import Checkout
+                from chalicelib.libs.purchase.core import Checkout
                 see = Checkout.__init__
                 """"""
                 # @TODO : refactoring : raw data usage
@@ -87,7 +86,7 @@ def register_payment_methods_customer_credits(blueprint: Blueprint) -> None:
                     "customer_id": order.customer_id.value,
                     "amount": -order.credit_spent_amount.value,
                     "changed_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "order_number": order.order_number.value,
+                    "order_number": order.number.value,
                 })
                 __log_flow('Credits Spent!')
 
@@ -129,7 +128,7 @@ def register_payment_methods_customer_credits(blueprint: Blueprint) -> None:
                 logger.log_exception(e)
 
             result = {
-                'order_number': order.order_number.value
+                'order_number': order.number.value
             }
 
             __log_flow('End')

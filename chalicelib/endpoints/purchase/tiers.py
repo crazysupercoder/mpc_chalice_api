@@ -1,5 +1,5 @@
 from chalice import Blueprint
-from chalicelib.libs.purchase.core.customer import CustomerTier
+from chalicelib.libs.purchase.core import CustomerTier
 from chalicelib.libs.purchase.customer.storage import CustomerTierStorageImplementation
 
 

@@ -1,16 +1,14 @@
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 from typing import List, Tuple
 from chalicelib.settings import settings
 from ..base import DynamoModel, boto3
 from .preferences import Preference
 from .Informations import InformationModel, Information, IdentificationNumber
 from .UserQuestions import UserQuestionModel, USER_QUESTION_TYPE
-from ..product_tracking import ProductsTrackingModel
 from ...mpc.categories import Category, CategoryEntry
 from ...mpc.product_sizes import SizeOptions, Gender
 from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderImplementation
-from chalicelib.libs.purchase.core.values import Id
-from chalicelib.libs.purchase.core.customer import CustomerTier
+from chalicelib.libs.purchase.core import Id, CustomerTier
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation, CustomerTierStorageImplementation
 
 user_question_model = UserQuestionModel()
@@ -57,9 +55,7 @@ class Profile(DynamoModel):
 
     FAVORITE_ITEMS_SK = 'USER_FAVORITES'
     FAVORITE_CATEGORIES_SK = 'USER_CATEGORIES'
-    __SCORED_PRODUCTS_ATTR_NAME__ = 'is_scored_products'
 
-    __tracking_data = None
     __user_attributes: dict = None
 
     def __init__(self, session_id, customer_id=None, email=None):
@@ -83,14 +79,6 @@ class Profile(DynamoModel):
     @is_anonymous.setter
     def is_anonymous(self, value):
         self.__is_anonymous = value
-
-    @property
-    def is_personalized(self) -> bool:
-        return self.user_attributes.get(self.__SCORED_PRODUCTS_ATTR_NAME__, False)
-
-    @is_personalized.setter
-    def is_personalized(self, value: bool):
-        self.set_user_attribute(self.__SCORED_PRODUCTS_ATTR_NAME__, bool(value))
 
     def get_partition_key(self, mode=None, **kwargs):
         if mode == PROFILE_SAVE_MODE.profile:
@@ -126,13 +114,6 @@ class Profile(DynamoModel):
     @email.setter
     def email(self, value: str):
         self.__email = value
-
-    @property
-    def tracking_data(self) -> dict:
-        if self.__tracking_data is None:
-            model = ProductsTrackingModel()
-            self.__tracking_data = model.get_visited_products_aggregation_data(self.customer_id)
-        return self.__tracking_data  # if isinstance(self.__tracking_data, list) else []
 
     @property
     def gender(self):
@@ -220,7 +201,7 @@ class Profile(DynamoModel):
             return __tier_to_dict(self.__purchase_customer_tier_lazy_loading_cache)
 
         # get assigned customer tier
-        customer = CustomerStorageImplementation().load(Id(self.customer_id))
+        customer = CustomerStorageImplementation().get_by_id(Id(self.customer_id))
         self.__purchase_customer_tier_lazy_loading_cache = customer.tier
         return __tier_to_dict(self.__purchase_customer_tier_lazy_loading_cache)
 
@@ -259,14 +240,6 @@ class Profile(DynamoModel):
 
     def get_brands(self) -> List[str]:
         brands = self.get_product_attribute('brands')
-        # if not self.is_anonymous and len(brands) == 0:
-        #     # TODO: Getting brands from personalize to save them by default
-        #     product_model = Product()
-        #     brands = product_model.get_top_brands(customer_id=self.email, size=2)
-        #     brand_names = [brand.get('brand_name') for brand in brands]
-        #     self.set_brands(brand_names)
-        #     return brand_names
-        # else:
         return brands
 
     def get_product_types(self):
@@ -554,13 +527,13 @@ class Profile(DynamoModel):
         information_model = InformationModel(self.customer_id)
         return information_model.add_address(address)
 
-    def get_address(self, address_nickname):
+    def get_address(self, address_hash):
         information_model = InformationModel(self.customer_id)
-        return information_model.get_address(address_nickname)
+        return information_model.get_address(address_hash)
 
-    def delete_address(self, address_nickname):
+    def delete_address(self, address_hash):
         information_model = InformationModel(self.customer_id)
-        return information_model.delete_address(address_nickname)
+        return information_model.delete_address(address_hash)
 
     @property
     def questions(self):
@@ -574,25 +547,26 @@ class Profile(DynamoModel):
         Key('sk').begins_with(self.QUESTIONS_SK_PREFIX)).get('Items')
         return [item['data'] for item in items]
 
-    # @property
-    # def answers(self) -> List[dict]:
-    #     response = self.table.query(
-    #         KeyConditionExpression=Key('pk').eq(self.get_partition_key()) & Key('sk').begins_with(self.QUESTIONS_SK_PREFIX)
-    #     )
-    #     items = response.get('Items', [])
-    #     return items
+    @property
+    def answers(self) -> List[dict]:
+        response = self.table.query(
+            KeyConditionExpression=Key('pk').eq(self.get_partition_key()) & Key('sk').begins_with(self.QUESTIONS_SK_PREFIX)
+        )
+        items = response.get('Items', [])
+        return items
 
-    # @classmethod
-    # def get_answers_by_customer(cls, customer_id: str) -> List[dict]:
-    #     dynamodb = boto3.resource('dynamodb', region_name=cls.AWS_REGION)
-    #     table = dynamodb.Table(cls.TABLE_NAME)
-    #     response = table.query(
-    #         KeyConditionExpression=Key('pk').eq(
-    #             cls.PARTITION_KEY % customer_id) & Key('sk').begins_with(
-    #                 cls.QUESTIONS_SK_PREFIX)
-    #     )
-    #     items = response.get('Items', [])
-    #     return items
+    @classmethod
+    def get_answers_by_customer(cls, customer_id: str) -> List[dict]:
+        dynamodb = boto3.resource('dynamodb', region_name=cls.AWS_REGION)
+        table = dynamodb.Table(cls.TABLE_NAME)
+        response = table.query(
+            KeyConditionExpression=Key('pk').eq(
+                cls.PARTITION_KEY % customer_id) & Key('sk').begins_with(
+                    cls.QUESTIONS_SK_PREFIX),
+            FilterExpression=Attr('data.answer').exists()
+        )
+        items = response.get('Items', [])
+        return [item for item in items if isinstance(item['data']['answer'], (list, dict))]
 
     def get_question(self, number):
         items = self.table.query(
@@ -656,78 +630,86 @@ class Profile(DynamoModel):
                 return True
         return False
     
-    def add_brand_category_size_questions(self, names):
+    def add_brand_category_size_questions(self):
         questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        i = 0
-        print(names)
-        print(len(names))
-        while i < len(names):
-            for question in questions:
-                if question.attribute_value == 'brand':
-                    flag = True
-                    for old in old_questions:
-                        if old['attribute']['value'] == 'brand' and names[i] in old['question']:
-                            flag = False
-                            break
-                    if flag == True:
-                        temp = user_question_model.get_item(question.id)
-                        self.add_question(names[i], temp)
-                elif question.attribute_value == 'category':
-                    flag = True
-                    for old in old_questions:
-                        if old['attribute']['value'] == 'category' and names[i] in old['question']:
-                            flag = False
-                            break
-                    if flag == True:
-                        temp = user_question_model.get_item(question.id)
-                        self.add_question(names[i], temp)
-                elif question.attribute_value == 'size':
-                    flag = True
-                    for old in old_questions:
-                        if old['attribute']['value'] == 'size' and names[i] in old['question']:
-                            flag = False
-                            break
-                    if flag == True:
-                        temp = user_question_model.get_item(question.id)
-                        self.add_question(names[i], temp)
-            if i < len(names) - 1:    
-                temp = {
-                    'question': 'Do you want to set preferences for {name} ?',
-                    'attribute': {
-                        'type': 'customer',
-                        'value': 'preferences_shop4_other',
-                    },
-                    'options':[
-                        'Yes - Let\'s add {name}', 'No - Skip for now'
-                    ]
-                }
-                flag = True
+
+        names_shop4_answer = None
+        names_shop4_number = 0
+        for old in old_questions:
+            if old['attribute']['value'] == 'names_shop4':
+                names_shop4_answer = old['answer']
+                names_shop4_number = old['number']
+                break
+
+        flag = True
+        name = None
+        next_name = None
+        for v in names_shop4_answer.values():
+            for item in v:
+                if flag == True and item['question_made'] == False:
+                    name = item['name']
+                    item['question_made'] = True
+                    flag = False
+                elif flag == False and name is not None and next_name is None:
+                    next_name = item['name']
+                elif flag == False and name is not None and next_name is not None:
+                    break
+            if flag == False and name is not None and next_name is not None:
+                break
+
+        self.save_answer(names_shop4_number, names_shop4_answer)
+
+        for question in questions:
+            if question.attribute_value == 'brand':
                 for old in old_questions:
-                    if names[i + 1] in old['question']:
-                        flag = False
-                        break  
-                if flag == True:
-                    self.add_question(names[i + 1], temp)
-            else:
-                temp = {
-                    'question': 'Would you like to add preferences for another person?',
-                    'attribute': {
-                        'type': 'customer',
-                        'value': 'preferences_shop4_another',
-                    },
-                    'options':[
-                        'Yes - Let\'s add someone', 'No - I \'ve done'
-                    ]
-                }
-                flag = True
+                    if old['attribute']['value'] == 'brand' and name == old['name']:
+                        raise Exception('The brand question of this name({}) were already made or answered.'.format(name))
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)
+            elif question.attribute_value == 'category':
                 for old in old_questions:
-                    if old['attribute']['value'] == 'preferences_shop4_another':
-                        flag = False
-                        break  
-                if flag == True:
-                    self.add_question('', temp)       
-            i+=1
+                    if old['attribute']['value'] == 'category' and name == old['name']:
+                        raise Exception('The category question of this name({}) were already made or answered.'.format(name))
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)
+            elif question.attribute_value == 'size':
+                for old in old_questions:
+                    if old['attribute']['value'] == 'size' and name == old['name']:
+                        raise Exception('The size question of this name({}) were already made or answered.'.format(name))
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)
+        if next_name is not None:    
+            temp = {
+                'question': 'Do you want to set preferences for ' + next_name + '?',
+                'attribute': {
+                    'type': 'customer',
+                    'value': 'preferences_shop4_other',
+                },
+                'priority': 8,
+                'name': name,
+                'options':[
+                    'Yes - Let\'s add ' + next_name, 'No - Skip for now'
+                ]
+            }
+            self.add_question('', temp)
+        else:
+            temp = {
+                'question': 'Would you like to add preferences for another person?',
+                'attribute': {
+                    'type': 'customer',
+                    'value': 'preferences_shop4_other',
+                },
+                'priority': 8,
+                'name': name,
+                'options':[
+                    'Yes - Let\'s add someone', 'No - I \'ve done'
+                ]
+            }
+            self.add_question('', temp)       
 
     def add_size_question(self, name):
         questions = user_question_model.get_all(convert = False)
@@ -735,9 +717,10 @@ class Profile(DynamoModel):
         for question in questions:
             if question.attribute_value == 'size':
                 for old in old_questions:
-                    if old['attribute']['value'] == 'size' and name in old['question']:
-                        return
+                    if old['attribute']['value'] == 'size' and name == old['name']:
+                        raise Exception('The size question of this name({}) were already made or answered.'.format(name))
                 temp = user_question_model.get_item(question.id)
+                temp['name'] = name
                 self.add_question(name, temp)
                 return
 
@@ -747,9 +730,10 @@ class Profile(DynamoModel):
         for question in questions:
             if question.attribute_value == 'brand':
                 for old in old_questions:
-                    if old['attribute']['value'] == 'brand' and name in old['question']:
-                        return
+                    if old['attribute']['value'] == 'brand' and name == old['name']:
+                        raise Exception('The brand question of this name({}) were already made or answered.'.format(name))
                 temp = user_question_model.get_item(question.id)
+                temp['name'] = name
                 self.add_question(name, temp)
                 return
 
@@ -759,9 +743,10 @@ class Profile(DynamoModel):
         for question in questions:
             if question.attribute_value == 'category':
                 for old in old_questions:
-                    if old['attribute']['value'] == 'category' and name in old['question']:
-                        return
+                    if old['attribute']['value'] == 'category' and name == old['name']:
+                        raise Exception('The category question of this name({}) were already made or answered.'.format(name))
                 temp = user_question_model.get_item(question.id)
+                temp['name'] = name
                 self.add_question(name, temp)
                 return    
     
@@ -809,6 +794,7 @@ class Profile(DynamoModel):
                 'type': 'customer',
                 'value': 'save_preferences',
             },
+            'priority': 10,
             'options': []
         }
         for old in old_questions:
@@ -825,19 +811,18 @@ class Profile(DynamoModel):
                 'type': 'customer',
                 'value': 'names_shop4',
             },
+            'priority': 9,
             'options': [
                 {
-                    'value': 'Who do you shop for in ' + item + '?',
+                    'question': 'Who do you shop for in ' + item + '?',
+                    'value': item,
                     'png_image': None
                 } for item in shop4list
             ]
         }
-        for old in old_questions:
-            if old['attribute']['value'] == 'names_shop4':
-                return
         self.add_question('', question)
     
-    def add_preferences_shop4_other_question(self, name):
+    def add_preferences_shop4_other_question(self, owner, name):
         old_questions = self.questions
         if name == 'the others you shop for':
             answer_tail = 'them'
@@ -849,28 +834,75 @@ class Profile(DynamoModel):
                 'type': 'customer',
                 'value': 'preferences_shop4_other',
             },
+            'priority': 8,
+            'name': owner,
             'options':[
                 'Yes - Let\'s add ' + answer_tail, 'No - Skip for now'
             ]
         }
         for old in old_questions:
-            if name in old['question']:
-                return
+            if old['attribute']['value'] == 'preferences_shop4_other' and owner == old['name']:
+                raise Exception('The preferences question of this user({}) were already made or answered.'.format(owner))
         self.add_question('', question)
     
-    def add_preferences_shop4_another_question(self):
+    def add_preferences_shop4_another_question(self, owner):
         old_questions = self.questions
         question = {
             'question': 'Would you like to add preferences for another person?',
             'attribute': {
                 'type': 'customer',
-                'value': 'preferences_shop4_another',
+                'value': 'preferences_shop4_other',
             },
+            'priority': 8,
+            'name': owner,
             'options':[
                 'Yes - Let\'s add someone', 'No - I \'ve done'
             ]
         }
+        self.add_question('', question)
+
+    def add_complete_question(self, name):
+        old_questions = self.questions
+        question = {
+            'question': 'Thank you for sharing,' + name + '!',
+            'attribute': {
+                'type': 'customer',
+                'value': 'complete',
+            },
+            'priority': 11,
+            'options': []
+        }
         for old in old_questions:
-            if old['attribute']['value'] == 'preferences_shop4_another':
+            if old['attribute']['value'] == 'complete':
                 return
         self.add_question('', question)
+
+    def add_main_category_brand_size_questions(self, name):
+        questions = user_question_model.get_all(convert = False)
+        for question in questions:
+            if question.attribute_value == 'category':
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)  
+            elif question.attribute_value == 'brand':
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)
+            elif question.attribute_value == 'size':
+                temp = user_question_model.get_item(question.id)
+                temp['name'] = name
+                self.add_question(name, temp)
+    
+    def update_question_name(self, name):
+        old_questions = self.questions
+        for old in old_questions:
+            old_name = old.get('name', '')
+            if old_name:
+                old['question'] = old['question'].replace(old_name, name)
+                old['name'] = name
+                self.table.update_item(Key={
+                    'pk': self.get_partition_key(),
+                    'sk': self.QUESTIONS_SK_PREFIX +  old['number'],
+                }, AttributeUpdates={
+                    'data': {'Value': old}
+                })

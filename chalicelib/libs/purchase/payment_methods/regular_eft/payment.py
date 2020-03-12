@@ -1,4 +1,4 @@
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Order
 
 
 class RegularEftOrderPaymentMethod(Order.PaymentMethodAbstract):

@@ -2,8 +2,7 @@ import uuid
 from chalicelib.extensions import *
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderImplementation
-from chalicelib.libs.purchase.core.values import OrderNumber, SimpleSku
-from chalicelib.libs.purchase.core.returns import ReturnRequest
+from chalicelib.libs.purchase.core import OrderNumber, SimpleSku, ReturnRequest
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
 from chalicelib.libs.purchase.order.sqs import OrderChangeSqsSenderEvent
@@ -200,7 +199,7 @@ class ReturnRequestChangeSqsHandler(SqsHandlerInterface):
         status_label: str
     ) -> None:
         order = self.__order_storage.load(order_number)
-        customer = self.__customer_storage.load(order.customer_id)
+        customer = self.__customer_storage.get_by_id(order.customer_id)
         product = self.__product_storage.load(simple_sku)
         message = Message(
             str(uuid.uuid4()),

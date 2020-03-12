@@ -1,12 +1,11 @@
 from typing import List
 from chalice import ForbiddenError
-from ...libs.core.chalice.request import MPCRequest
+from chalicelib.libs.core.chalice.request import MPCRequest
+from chalicelib.libs.models.ml.scored_products import ScoredProduct
 from ...libs.models.mpc.user import User
 from ...libs.models.mpc.Cms.meta import Meta
 from ...libs.models.mpc.Cms.weight import WeightModel
 from ...libs.models.ml.products import Product
-from ...libs.models.ml.delta import DeltaBucketToolkit
-from ...libs.models.mpc.product_tracking import ProductsTrackingModel
 from ...libs.seen.service import SeenAppService
 
 
@@ -17,36 +16,18 @@ def register_products(blue_print):
     def __get_current_user() -> User:
         return __get_request().current_user
 
-    def __get_tracking_info(config_sku_list: List[str]) -> dict:
-        product_tracking_model = ProductsTrackingModel()
-        current_request = __get_request()
-        user_id = current_request.customer_id
-        session_id = current_request.session_id
-        read_statuses = product_tracking_model.get_products_user_read_status(config_sku_list, user_id, session_id)
-
-        counters = product_tracking_model.get_products_counters(config_sku_list)
-
-        result = {}
-        for config_sku in config_sku_list:
-            result[config_sku] = {
-                'views': counters[config_sku].get('views'),
-                'visits': counters[config_sku].get('visits'),
-                'clicks': counters[config_sku].get('clicks'),
-                'is_read': read_statuses[config_sku],
-            }
-
-        return result
-
     @blue_print.route('/products', cors=True)
     def products():
         request = __get_request()
         current_user = request.current_user
-        weight = WeightModel()
 
-        products = DeltaBucketToolkit.get_buckets_with_email(
-            current_user.email, username=current_user.user_id,
-            weight=weight.scoring_weight, size=500)
-        return [item.to_dict(mode='list') for item in products]
+        response = ScoredProduct().listByCustomFilter(
+            customer_id=current_user.id,
+            sort_by_score=True,
+            tier=current_user.profile.tier,
+            page=request.page, size=request.size)
+
+        return response['products']  # response
 
     @blue_print.route('/admin/product_scoring', cors=True, methods=['GET', 'POST'])
     def products():
@@ -81,9 +62,13 @@ def register_products(blue_print):
             raise ForbiddenError('Administrators are only permitted!')
         elif not meta.check_secret_key(secret_key):
             raise ForbiddenError('Invalid Secret Key.')
-        products = DeltaBucketToolkit.get_buckets_with_email(
-            email, weight=weight.scoring_weight, size=500)
-        return [item.to_dict(mode='list') for item in products]
+
+        response = ScoredProduct().listByCustomFilter(
+            email=email, sort_by_score=True,
+            tier=current_user.profile.tier,
+            page=request.page, size=request.size)
+
+        return response['products']  # response
 
     @blue_print.route('/products/{product_id}', cors=True)
     def get_product(product_id):
@@ -99,23 +84,11 @@ def register_products(blue_print):
     def get_product(product_id):
         seen_app_service = SeenAppService()
         request = __get_request()
-        product = Product()
-        response = product.get_complete_looks(
-            product_id, customer_id=request.current_user.email,
+        user_id = request.customer_id
+        response = ScoredProduct().get_complete_looks(
+            product_id, customer_id=user_id,
             size=request.size, page=request.page,
             tier=request.current_user.profile.tier)
-        
-        # tracking info, is_seen
-        user_id = request.customer_id
-        config_sku_list = [product_data.get('sku') for product_data in response]
-        tracking_info = __get_tracking_info(config_sku_list)
-        if user_id is not None:
-            seen_storage = seen_app_service.seen_storage(user_id)
-        for product_data in response:
-            config_sku = product_data.get('sku')
-            product_data['tracking_info'] = tracking_info[config_sku]
-            if user_id is not None:
-                product_data['is_seen']=seen_storage.is_added(config_sku)
 
         return response
 

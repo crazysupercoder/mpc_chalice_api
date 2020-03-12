@@ -1,7 +1,6 @@
 from typing import Tuple
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.product import ProductInterface
-from chalicelib.libs.purchase.core.values import EventCode, SimpleSku, Qty, Cost, Name
+from chalicelib.libs.purchase.core import ProductInterface, EventCode, SimpleSku, Qty, Cost, Name
 
 
 class ProductInterfaceImplementation(ProductInterface):

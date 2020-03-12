@@ -7,7 +7,7 @@ from .product import ProductInterface
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class CartItem(object):
+class _CartItem(object):
     def __init__(self, product: ProductInterface, qty: Qty):
         if not isinstance(product, ProductInterface):
             raise ArgumentTypeException(self.__init__, 'product', product)
@@ -56,7 +56,7 @@ class CartItem(object):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class ProductNotInCartException(ApplicationLogicException):
+class _ProductNotInCartException(ApplicationLogicException):
     def __init__(self, simple_sku: SimpleSku):
         super().__init__('Product "' + str(simple_sku) + '" is not added to the Cart!')
 
@@ -65,6 +65,8 @@ class ProductNotInCartException(ApplicationLogicException):
 
 
 class Cart(object):
+    Item = _CartItem
+
     def __init__(self, cart_id: Id, vat_percent: Percentage):
         if not isinstance(cart_id, Id):
             raise ArgumentTypeException(self.__init__, 'cart_id', cart_id)
@@ -73,7 +75,7 @@ class Cart(object):
             raise ArgumentTypeException(self.__init__, 'vat_percent', vat_percent)
 
         self.__id = cart_id
-        self.__items: List[CartItem] = []
+        self.__items: List[Cart.Item] = []
         self.__vat_percent = vat_percent
 
     @property
@@ -81,7 +83,7 @@ class Cart(object):
         return self.__id
 
     @property
-    def items(self) -> Tuple[CartItem]:
+    def items(self) -> Tuple['Cart.Item']:
         return tuple(self.__items)
 
     @property
@@ -106,7 +108,7 @@ class Cart(object):
         return Cost(per_percent * self.__vat_percent.value)
 
     def add_item(self, product: ProductInterface, qty: Qty) -> None:
-        new_item = CartItem(product, qty)
+        new_item = Cart.Item(product, qty)
 
         for old_item in self.__items:
             if old_item.simple_sku == new_item.simple_sku:
@@ -117,21 +119,19 @@ class Cart(object):
 
     def set_item_qty(self, simple_sku: SimpleSku, qty: Qty) -> None:
         for index, item in enumerate(self.__items):
-            item: CartItem
             if item.simple_sku == simple_sku:
-                self.__items[index] = CartItem(item.product, qty)
+                self.__items[index] = Cart.Item(item.product, qty)
                 return
         else:
-            raise ProductNotInCartException(simple_sku)
+            raise _ProductNotInCartException(simple_sku)
 
     def remove_item(self, simple_sku: SimpleSku) -> None:
         for index, item in enumerate(self.__items):
-            item: CartItem
             if item.simple_sku == simple_sku:
                 del self.__items[index]
                 return
         else:
-            raise ProductNotInCartException(simple_sku)
+            raise _ProductNotInCartException(simple_sku)
 
     def clear(self) -> None:
         self.__items = []
@@ -144,7 +144,7 @@ class CartStorageInterface(object):
     def save(self, cart: Cart) -> None:
         raise NotImplementedError()
 
-    def load(self, cart_id: Id) -> Optional[Cart]:
+    def get_by_id(self, cart_id: Id) -> Optional[Cart]:
         raise NotImplementedError()
 
 

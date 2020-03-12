@@ -1,3 +1,4 @@
+import math
 from typing import Optional, Union, List, Tuple
 from datetime import datetime, timedelta
 from chalicelib.extensions import *
@@ -5,7 +6,7 @@ from chalicelib.settings import settings
 from chalicelib.libs.core.elastic import Elastic
 from .product_visit_logs import ProductVisitLog
 from .ProductSizeSort import ProductSizeSort
-from ..ml.delta import DeltaBucketToolkit
+from ..ml.product_entry import ProductEntry
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -43,6 +44,7 @@ class ProductSearchCriteria(object):
     SORT_COLUMN_COLOR = 'color'
     SORT_COLUMN_CREATED_AT = 'newin'
     SORT_COLUMN_SCORE = '_score'
+    SORT_COLUMN_PERCENTAGE_SCORE = 'percentage_score'
     __SORT_COLUMNS = (
         SORT_COLUMN_ID,
         SORT_COLUMN_SKU,
@@ -57,6 +59,7 @@ class ProductSearchCriteria(object):
         SORT_COLUMN_COLOR,
         SORT_COLUMN_CREATED_AT,
         SORT_COLUMN_SCORE,
+        SORT_COLUMN_PERCENTAGE_SCORE,
     )
 
     SORT_DIRECTION_ASC = 'asc'
@@ -235,15 +238,32 @@ class Product(object):
             settings.AWS_ELASTICSEARCH_PRODUCTS
         )
 
-    def get_all(self):
+    def get_all(self, convert: bool = False):
         # TODO: Should be refactored later.
+        offset, CHUNK_SIZE = 0, 1000
+        products = []
+
         query = {
-            "size": 1000,
-            "from": 0,
+            "size": CHUNK_SIZE,
+            "from": offset,
         }
 
         response = self.__elastic.post_search(query)['hits']
-        return self.__convert_products(response)
+        total = response['total']
+        products += response['hits']
+        while len(products) < total:
+            offset += CHUNK_SIZE
+            query = {
+                "size": CHUNK_SIZE,
+                "from": offset,
+            }
+            response = self.__elastic.post_search(query)['hits']
+            products += response['hits']
+            
+        if convert:
+            return self.__convert_products({'total': total, 'hits': products})
+        else:
+            return [ProductEntry(**item['_source']) for item in products]
 
     def listAll(self, sort, order, page=1, size=18):
         fromindex = (int(page) - 1) * int(size)
@@ -284,7 +304,8 @@ class Product(object):
                     must_item['bool'] = {
                         "should": [
                             {"match_phrase_prefix": {"product_name": value}},
-                            {"match_phrase_prefix": {"product_description": value}}
+                            # {"match_phrase_prefix": {"product_description": value}} When search_query is 'Dress', this returns some socks and shoes
+                            {"match_phrase_prefix": {"product_size_attribute": value}}
                         ]
                     }
             elif key == 'created_at':
@@ -313,7 +334,14 @@ class Product(object):
 
         return ret
 
-    def listByCustomFilter(self, custom_filters: Optional[dict], sorts, page=1, size=18):
+    def listByCustomFilter(
+        self,
+        custom_filters: Optional[dict],
+        sorts: dict,
+        tier: dict,
+        page: int,
+        size: int
+    ):
         filters = self.__makeESFilterFromCustomFilter(custom_filters)
         fromindex = (int(page) - 1) * int(size)
         if fromindex < 0:
@@ -323,54 +351,14 @@ class Product(object):
             "query": filters,
             "size": size,
             "from": fromindex,
-            "sort": [{
-                self.__class__.__convert_filter(list(item.keys())[0]): list(item.values())[0]
-            } for item in sorts],
+            "sort": [
+                self.__class__.__convert_sort_filter(column, direction)
+                for column, direction in sorts.items()
+            ],
         }
 
         response = self.__elastic.post_search(query)['hits']
-        return self.__convert_products(response)
-
-    def listByCustomFilterWithPersonalize(self, email, custom_filters: Optional[dict], sorts, page=1, size=18):
-        """Personalized search of products
-        """
-
-        delta = DeltaBucketToolkit()
-        scored_products = delta.get_buckets_with_email(email)
-
-        is_blank_filter = True
-        for key, value in custom_filters.items():
-            if value:
-                is_blank_filter = False
-                break
-
-        if isinstance(sorts, list) and len(sorts) == 1 and '_score' in sorts[0].keys():
-            if is_blank_filter:
-                response = self.get_all()
-            else:
-                response = self.listByCustomFilter(custom_filters, sorts, page=1, size=1000)
-
-            for product in response['products']:
-                filtered = [item for item in scored_products if item.rs_sku == product['sku']]
-                if len(filtered) == 0:
-                    pass
-                else:
-                    product['scores'] = filtered[0].to_dict(mode='cache')
-            response['products'] = sorted(
-                response['products'],
-                key=lambda product: product.get(
-                    'scores', {}).get('total', 0),
-                reverse=True)[(page - 1) * size: page * size]
-            return response
-        else:
-            response = self.listByCustomFilter(custom_filters, sorts, page=page, size=size)
-            for product in response['products']:
-                filtered = [item for item in scored_products if item.rs_sku == product['sku']]
-                if len(filtered) == 0:
-                    pass
-                else:
-                    product['scores'] = filtered[0].to_dict(mode='cache')
-            return response
+        return self.__convert_products(response, tier=tier)
 
     def update(self, config_sku, data):
         json_data = {
@@ -406,20 +394,26 @@ class Product(object):
 
         return item
 
-    def __convert_products(self, data):
+    def __convert_products(self, data, tier: dict = None):
         ret ={
             "total": data["total"],
-            "products": [self.__convert_item(item["_source"]) for item in data["hits"]]
+            "products": [self.__convert_item(item["_source"], tier=tier) for item in data["hits"]]
         }
         return ret
 
-    def __convert_item(self, item):
-        from_date = datetime.now() - timedelta(days=settings.NEW_PRODUCT_THRESHOLD)
-
-        # @todo : refactoring
+    @staticmethod
+    def __convert_item_calculate_prices(item) -> tuple:
         original_price = float(item['rs_selling_price'] or 0)
         discount = float(item['discount'] or 0)
         current_price = original_price - original_price * discount / 100
+        return original_price, current_price
+
+    def __convert_item(self, item, tier: dict = None):
+        original_price, current_price = self.__class__.__convert_item_calculate_prices(item)
+
+        fbucks = None
+        if isinstance(tier, dict) and not tier.get('is_neutral'):
+            fbucks = math.ceil(item.get('current_price', current_price) * tier['discount_rate'] / 100)
 
         result = {
             'id': item['portal_config_id'],
@@ -432,6 +426,7 @@ class Product(object):
             'discount': item['discount'],
             'original_price': original_price,
             'current_price': current_price,
+            'fbucks': fbucks,
 
             # 'badge': 'NEW IN' if datetime.strptime(item['created_at'], "%Y-%m-%d %H:%M:%S") > from_date else None,
             'product_type': item['product_size_attribute'],
@@ -472,6 +467,47 @@ class Product(object):
             'search_query': 'search_query'
         }
         return switcher.get(filter_name, "invalid_name")
+
+    @staticmethod
+    def __convert_sort_filter(column_name, direction):
+        sort_map = {
+            'id': {'portal_config_id': {'order': direction}},
+            'sku': {'rs_sku': {'order': direction}},
+            'title': {'product_name': {'order': direction}},
+            'subtitle': {'product_description': {'order': direction}},
+            'product_type': {'product_size_attribute': {'order': direction}},
+            'product_sub_type': {'rs_product_sub_type': {'order': direction}},
+            'gender': {'gender': {'order': direction}},
+            'brand': {'manufacturer': {'order': direction}},
+            'size': {'sizes.size': {'order': direction}},
+            'color': {'rs_colour': {'order': direction}},
+            'newin': {'created_at': {'order': direction}},
+            '_score': {'_score': {'order': direction}},
+            'search_query': {'search_query': {'order': direction}},
+            'price': {
+                '_script': {
+                    "type": "number",
+                    "script": {
+                        "lang": "painless",
+                        # see __convert_item_calculate_prices()
+                        "source": "{price} - {price} * {discount} / 100".format(**{
+                            'price': "doc['rs_selling_price'].value",
+                            'discount': "doc['discount'].value"
+                        }),
+                    },
+                    "order": direction
+                }
+            }
+        }
+
+        if column_name not in sort_map.keys():
+            raise ValueError('Oh, no! {} does not know, how to {} with {} column!'.format(
+                Product.__qualname__,
+                '__convert_sort_filter',
+                column_name
+            ))
+
+        return sort_map[column_name]
 
     def __getSumofQTY(self, data):
         filters = self.__makeESFilterFromCustomFilter(data)
@@ -866,4 +902,3 @@ class Product(object):
                 return [item['_source'] for item in response]
         except:
             return []
-

@@ -1,8 +1,8 @@
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.cart import CartStorageInterface
-from chalicelib.libs.purchase.core.customer import CustomerStorageInterface
-from chalicelib.libs.purchase.core.checkout import Checkout, CheckoutItem, CheckoutStorageInterface
-from chalicelib.libs.purchase.core.values import Id, DeliveryAddress, Cost, Percentage
+from chalicelib.libs.purchase.core import \
+    CartStorageInterface, CustomerStorageInterface, \
+    Checkout, CheckoutStorageInterface, \
+    Id, DeliveryAddress, Cost, Percentage
 from chalicelib.libs.purchase.settings import PurchaseSettings
 
 
@@ -33,12 +33,12 @@ class _CheckoutAppService(object):
 
     def init(self, customer_id: str, cart_id: str) -> None:
         customer_id = Id(customer_id)
-        customer = self.__customer_storage.load(customer_id)
+        customer = self.__customer_storage.get_by_id(customer_id)
         if not customer:
             raise ApplicationLogicException('Customer does not exist!')
 
         cart_id = Id(cart_id)
-        cart = self.__cart_storage.load(cart_id)
+        cart = self.__cart_storage.get_by_id(cart_id)
         if not cart:
             raise ApplicationLogicException('Cart does not exist!')
         elif cart.is_empty:
@@ -48,7 +48,7 @@ class _CheckoutAppService(object):
 
         vat_percent = Percentage(self.__purchase_settings.vat)
         delivery_cost = Cost(self.__purchase_settings.fee)
-        checkout_items = [CheckoutItem(cart_item.product, cart_item.qty) for cart_item in cart.items]
+        checkout_items = [Checkout.Item(cart_item.product, cart_item.qty) for cart_item in cart.items]
         checkout = Checkout(
             customer,
             tuple(checkout_items),
@@ -83,7 +83,7 @@ class _CheckoutAppService(object):
         if not checkout:
             raise ApplicationLogicException('Checkout does not exist!')
 
-        customer = self.__customer_storage.load(customer_id)
+        customer = self.__customer_storage.get_by_id(customer_id)
         if not customer:
             raise ApplicationLogicException('Customer does not exist!')
 

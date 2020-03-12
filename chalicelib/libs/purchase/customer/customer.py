@@ -1,26 +1,26 @@
 from typing import Optional, Tuple
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id, Email, Name, DeliveryAddress
-from chalicelib.libs.purchase.core.customer import \
-    CustomerDeliveryAddress, CustomerName, Customer as CustomerInterface, CustomerTier
+from chalicelib.libs.purchase.core import \
+    Id, Email, Name, DeliveryAddress, \
+    CustomerInterface, CustomerTier
 from chalicelib.libs.models.mpc.Cms.Informations import Information
 
 
 class _CustomerDeliveryAddressList(object):
-    def __init__(self, items: Tuple[CustomerDeliveryAddress]):
+    def __init__(self, items: Tuple[CustomerInterface.DeliveryAddress]):
         self.__items = []
         for item in items:
-            if not isinstance(item, CustomerDeliveryAddress):
+            if not isinstance(item, CustomerInterface.DeliveryAddress):
                 raise ArgumentTypeException(self.__init__, 'items', items)
 
             self.__items.append(item)
 
     @property
-    def items(self) -> Tuple[CustomerDeliveryAddress]:
+    def items(self) -> Tuple[CustomerInterface.DeliveryAddress]:
         return tuple(self.__items)
 
-    def add_address(self, new_address: CustomerDeliveryAddress) -> None:
-        if not isinstance(new_address, CustomerDeliveryAddress):
+    def add_address(self, new_address: CustomerInterface.DeliveryAddress) -> None:
+        if not isinstance(new_address, CustomerInterface.DeliveryAddress):
             raise ArgumentTypeException(self.add_address, 'item', new_address)
 
         for old_address in self.__items:
@@ -53,11 +53,11 @@ class CustomerImplementation(CustomerInterface):
         delivery_addresses = []
         for information_address in information.addresses:
             if information_address.business_type:
-                address_type = CustomerDeliveryAddress.ADDRESS_TYPE_BUSINESS
+                address_type = CustomerInterface.DeliveryAddress.ADDRESS_TYPE_BUSINESS
             else:
-                address_type = CustomerDeliveryAddress.ADDRESS_TYPE_RESIDENTIAL
+                address_type = CustomerInterface.DeliveryAddress.ADDRESS_TYPE_RESIDENTIAL
 
-            delivery_addresses.append(CustomerDeliveryAddress(
+            delivery_addresses.append(CustomerInterface.DeliveryAddress(
                 address_type,
                 DeliveryAddress(
                     information_address.recipient_name,
@@ -105,11 +105,11 @@ class CustomerImplementation(CustomerInterface):
         return genders_map[information_gender_value]
 
     @property
-    def name(self) -> Optional[CustomerName]:
+    def name(self) -> Optional[CustomerInterface.Name]:
         if not self.__information.first_name or not self.__information.last_name:
             return None
 
-        return CustomerName(
+        return CustomerInterface.Name(
             Name(self.__information.first_name),
             Name(self.__information.last_name)
         )
@@ -123,10 +123,10 @@ class CustomerImplementation(CustomerInterface):
         self.__set_tier(tier)
 
     @property
-    def delivery_addresses(self) -> Tuple[CustomerDeliveryAddress]:
+    def delivery_addresses(self) -> Tuple[CustomerInterface.DeliveryAddress]:
         return self.__delivery_addresses_list.items
 
-    def add_delivery_address(self, delivery_address: CustomerDeliveryAddress) -> None:
+    def add_delivery_address(self, delivery_address: CustomerInterface.DeliveryAddress) -> None:
         self.__delivery_addresses_list.add_address(delivery_address)
 
     def remove_delivery_address(self, address_hash) -> None:

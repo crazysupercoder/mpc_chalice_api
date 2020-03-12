@@ -1,8 +1,7 @@
 from typing import Optional
 from chalicelib.extensions import *
 from chalicelib.libs.models.mpc.Product import Product as MpcProducts
-from chalicelib.libs.purchase.core.values import SimpleSku
-from chalicelib.libs.purchase.core.product import ProductInterface, ProductStorageInterface
+from chalicelib.libs.purchase.core import SimpleSku, ProductInterface, ProductStorageInterface
 from .product import ProductInterfaceImplementation
 
 

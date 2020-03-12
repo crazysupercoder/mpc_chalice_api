@@ -1,6 +1,6 @@
 from chalice import Blueprint
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id
+from chalicelib.libs.purchase.core import Id
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
 from chalicelib.libs.purchase.customer.delivery_address import\
     CustomerDeliveryAddressForm, \
@@ -18,7 +18,7 @@ def register_customer_delivery_addresses(blueprint: Blueprint) -> None:
     def __response_list(user_id: str) -> dict:
         customer_storage = CustomerStorageImplementation()
         customer_id = Id(user_id)
-        customer = customer_storage.load(customer_id)
+        customer = customer_storage.get_by_id(customer_id)
 
         delivery_addresses = [{
             'hash': delivery_address.address_hash,

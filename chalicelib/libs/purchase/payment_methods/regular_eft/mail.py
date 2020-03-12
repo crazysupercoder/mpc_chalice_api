@@ -1,7 +1,7 @@
 from typing import Tuple
 from chalicelib.extensions import *
 from chalicelib.libs.core.mailer import MailMessageInterface
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Order
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
 
 
@@ -12,11 +12,8 @@ class RegularEftBankDetailsMailMessage(MailMessageInterface):
         if not isinstance(order, Order):
             raise ArgumentTypeException(self.__init__, 'order', order)
 
-        # @todo : create lazy loader for order ???
-        customer_storage = CustomerStorageImplementation()
-
         self.__order = order
-        self.__customer = customer_storage.load(order.customer_id)
+        self.__customer = CustomerStorageImplementation().get_by_id(order.customer_id)
 
     @property
     def to_email(self) -> str:
@@ -24,7 +21,7 @@ class RegularEftBankDetailsMailMessage(MailMessageInterface):
 
     @property
     def subject(self) -> str:
-        return 'EFT Payment info for Order #{}'.format(self.__order.order_number)
+        return 'EFT Payment info for Order #{}'.format(self.__order.number)
 
     @property
     def content(self) -> str:
@@ -34,10 +31,10 @@ class RegularEftBankDetailsMailMessage(MailMessageInterface):
 
     @property
     def paths_to_attachments(self) -> Tuple[str]:
-        order_number = self.__order.order_number.value
+        order_number = self.__order.number.value
         path_to_file = '/tmp/eft_payment_info_{}.txt'.format(order_number)
         with open(path_to_file, "w+") as file:
-            file.write('EFT Payment info for Order #{}'.format(self.__order.order_number))
+            file.write('EFT Payment info for Order #{}'.format(order_number))
 
         return tuple([path_to_file])
 

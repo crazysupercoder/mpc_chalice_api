@@ -17,7 +17,6 @@ def convert_to_datetime(value: str, format_str: str = '%Y-%m-%d %H:%M:%S'):
 
 class ScoringWeight(object):
     __version: int = None
-    __personalize: float = 1.0
     __question: float = 1.0
     __order: float = 1.0
     __track: float = 1.0
@@ -29,7 +28,6 @@ class ScoringWeight(object):
     def __init__(
             self,
             version: Union[str, int] = None,
-            personalize: Union[str, float, int] = 1.0,
             question: Union[str, float, int] = 1.0,
             order: Union[str, float, int] = 1.0,
             track: Union[str, float, int] = 1.0,
@@ -38,7 +36,6 @@ class ScoringWeight(object):
             updated_by: str = None,
             **kwargs):
         self.version = version
-        self.personalize = personalize
         self.question = question
         self.order = order
         self.track = track
@@ -46,18 +43,6 @@ class ScoringWeight(object):
         self.expired_at = expired_at
         self.__updated_by = updated_by
         super(ScoringWeight, self).__init__()
-
-    @property
-    def personalize(self) -> float:
-        return self.__personalize
-    
-    @personalize.setter
-    def personalize(self, value: Union[float, int, str]):
-        if value and isinstance(value, (int, float, str)):
-            try:
-                self.__personalize = float(value)
-            except:
-                pass
 
     @property
     def updated_by(self) -> str:
@@ -132,8 +117,7 @@ class ScoringWeight(object):
         return self.version is None
 
     def __eq__(self, other):
-        attrs_to_match = [
-            'personalize', 'question', 'order', 'track']
+        attrs_to_match = ['question', 'order', 'track']
         for attr in attrs_to_match:
             if getattr(self, attr) != getattr(other, attr):
                 return False
@@ -142,7 +126,6 @@ class ScoringWeight(object):
     def to_shorten_dict(self) -> dict:
         return {
             'version': int(self.version),
-            'pw': float(self.personalize),
             'qw': float(self.question),
             'ow': float(self.order),
             'tw': float(self.track),
@@ -152,7 +135,6 @@ class ScoringWeight(object):
         if to_str:
             return {
                 'version': str(self.version),
-                'personalize': str(self.personalize),
                 'question': str(self.question),
                 'order': str(self.order),
                 'track': str(self.track),
@@ -162,7 +144,6 @@ class ScoringWeight(object):
         else:
             return {
                 'version': int(self.version) if self.version else None,
-                'personalize': float(self.personalize),
                 'question': float(self.question),
                 'order': float(self.order),
                 'track': float(self.track),

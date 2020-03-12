@@ -6,13 +6,8 @@ from .constants import *
 
 env_path = os.path.join(
     os.path.dirname(__file__),
-    '.env')
+    os.environ.get('ENVFILE', '.env'))
 load_dotenv(env_path)
-
-
-class PERSONALIZE_RESOURCE_TYPE:
-    campaign = 'campaign'
-    solution = 'solution'
 
 
 class Config:
@@ -40,225 +35,7 @@ class Config:
         'AWS_COGNITO_USER_POOL_ARN',
         'arn:aws:cognito-idp:eu-west-1:917885688343:userpool/%s' % AWS_COGNITO_USER_POOL_ID
     )
-
-    # ------------------------------------------------------------------------------------------------------------------
-    #                                               PERSONALIZATION
-    # ------------------------------------------------------------------------------------------------------------------
-
-    # AWS Peronalize Configuration
-    AWS_PERSONALIZE_DEFAULT_REGION = os.environ.get('AWS_PERSONALIZE_DEFAULT_REGION', 'eu-west-1')
-    
-    def build_personalize_resource_name(
-                resource_id: str,
-                account_id: str = AWS_ACCOUNT_ID,
-                region: str = AWS_PERSONALIZE_DEFAULT_REGION,
-                resource_type: str = PERSONALIZE_RESOURCE_TYPE.campaign,
-            ) -> str:
-        AWS_PERSONALIZE_PATTERN = "arn:aws:personalize:{region}:%s" % account_id
-        resource_arn_maps = {
-            PERSONALIZE_RESOURCE_TYPE.campaign: "%s:%s/%s" % (
-                AWS_PERSONALIZE_PATTERN, PERSONALIZE_RESOURCE_TYPE.campaign, '{id}'),
-            PERSONALIZE_RESOURCE_TYPE.solution: "%s:%s/%s" % (
-                AWS_PERSONALIZE_PATTERN, PERSONALIZE_RESOURCE_TYPE.solution, '{id}')
-        }
-
-        if resource_type not in resource_arn_maps:
-            raise Exception("Unknown resource type - %s" % resource_type)
-        return resource_arn_maps[resource_type].format(
-            region=region, id=resource_id)
-    
-
-    ## SIMPLE SKU
-    AWS_PERSONALIZE_SIMPLE_SKU_REGION = os.environ.get('AWS_PERSONALIZE_SIMPLE_SKU_REGION', 'us-east-1')
-    AWS_PERSONALIZE_SIMPLE_SKU_RECOMMEND_CAMPAIGN_ARN = os.environ.get(
-        'AWS_PERSONALIZE_SIMPLE_SKU_RECOMMEND_CAMPAIGN_ARN',
-        'WE DO NOT USE THIS AT THE MOMENT'
-    )
-
-    ## CONFIG SKU
-    AWS_PERSONALIZE_CONFIG_SKU_REGION = os.environ.get('AWS_PERSONALIZE_CONFIG_SKU_REGION', 'us-east-1')
-    AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-personalize-config-sku-hrnn-with-meta-campaign'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_RECOMMEND_SOLUTION_VERSION_ARN',
-            'mpc-personalize-config-sku-hrnn-with-meta-solution/4b268b3a'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_CAMPAIGN_ARN',
-            'mpc-personalize-config-sku-similar-items-campaign'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_SIMILAR_ITEMS_SOLUTION_VERSION_ARN',
-            'mpc-personalize-config-sku-similar-items-solution/6ac8121e'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_RANKING_CAMPAIGN_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_RANKING_CAMPAIGN_ARN',
-            'mpc-personalize-config-sku-personalized-ranking-campaign'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_RANKING_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_CONFIG_SKU_RANKING_SOLUTION_VERSION_ARN',
-            'mpc-personalize-config-sku-personalized-ranking-solution/568329b2'
-        ),
-        region=AWS_PERSONALIZE_CONFIG_SKU_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_CONFIG_SKU_TRACKING_ID = os.environ.get(
-        'AWS_PERSONALIZE_CONFIG_SKU_TRACKING_ID',
-        '06cc3041-438e-4e18-a4d8-fc9af087d728'
-    )
-
-    ## PRODUCT SIZE
-    AWS_PERSONALIZE_SIZE_REGION = os.environ.get('AWS_PERSONALIZE_SIZE_REGION', 'eu-west-1')
-    AWS_PERSONALIZE_SIZE_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_SIZE_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-personalize-product-size-hrnn-campaign'
-        ),
-        region=AWS_PERSONALIZE_SIZE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_SIZE_RECOMMEND_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_SIZE_RECOMMEND_SOLUTION_VERSION_ARN',
-            'mpc-personalize-product-size-hrnn-with-meta/77caec95'
-        ),
-        region=AWS_PERSONALIZE_SIZE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_SIZE_RANKING_CAMPAIGN_ARN = build_personalize_resource_name(
-            os.environ.get(
-            'AWS_PERSONALIZE_SIZE_RANKING_CAMPAIGN_ARN',
-            'mpc-personalize-product-size-personalized-ranking-campaign'
-        ),
-        region=AWS_PERSONALIZE_SIZE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_SIZE_TRACKING_ID = os.environ.get(
-        'AWS_PERSONALIZE_SIZE_TRACKING_ID',
-        '3adb63f0-4208-4186-a5d2-c90b41c40496'
-    )
-
-    ## PRODUCT BRAND
-    AWS_PERSONALIZE_BRAND_REGION = os.environ.get('AWS_PERSONALIZE_BRAND_REGION', 'eu-west-1')
-    AWS_PERSONALIZE_BRAND_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_BRAND_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-personalize-product-brand-hrnn-campaign'
-        ),
-        region=AWS_PERSONALIZE_BRAND_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_BRAND_RECOMMEND_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_BRAND_RECOMMEND_SOLUTION_VERSION_ARN',
-            'mpc-personalize-product-brand-hrnn-with-meta/59b5757b'
-        ),
-        region=AWS_PERSONALIZE_BRAND_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_BRAND_TRACKING_ID = os.environ.get(
-        'AWS_PERSONALIZE_BRAND_TRACKING_ID',
-        'd5269b28-d223-42f5-b739-9853b9d304ca'
-    )
-
-    ## PRODUCT SIZE
-    AWS_PERSONALIZE_PRODUCT_TYPE_REGION = os.environ.get(
-        'AWS_PERSONALIZE_PRODUCT_TYPE_REGION', 'eu-west-1')
-    AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-product-type-hrnn-cmp'
-        ),
-        region=AWS_PERSONALIZE_PRODUCT_TYPE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_PRODUCT_TYPE_RECOMMEND_SOLUTION_VERSION_ARN',
-            'mpc-product-type-hrnn/b8d7e6e0'
-        ),
-        region=AWS_PERSONALIZE_PRODUCT_TYPE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_PRODUCT_TYPE_SIMILAR_ITEMS_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_PRODUCT_TYPE_SIMILAR_ITEMS_CAMPAIGN_ARN',
-            'mpc-personalize-product-type-similar-items-campaign'
-        ),
-        region=AWS_PERSONALIZE_PRODUCT_TYPE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_PRODUCT_TYPE_RANKING_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_PRODUCT_TYPE_RANKING_CAMPAIGN_ARN',
-            'mpc-personalize-product-type-ranking-campaign'
-        ),
-        region=AWS_PERSONALIZE_PRODUCT_TYPE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_PRODUCT_TYPE_TRACKING_ID = os.environ.get(
-        'AWS_PERSONALIZE_PRODUCT_TYPE_TRACKING_ID',
-        'bd1f8bff-c823-4cd3-bde7-a85b764f7210'
-    )
-
-    ## PRODUCT PRICE
-    AWS_PERSONALIZE_PRICE_REGION = os.environ.get(
-        'AWS_PERSONALIZE_PRICE_REGION', 'us-east-1')
-    AWS_PERSONALIZE_PRICE_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_PRICE_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-personalize-price-campaign'
-        ),
-        region=AWS_PERSONALIZE_PRICE_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-
-    ## GENDER
-    AWS_PERSONALIZE_GENDER_REGION = os.environ.get(
-        'AWS_PERSONALIZE_GENDER_REGION', 'us-east-1')
-    AWS_PERSONALIZE_GENDER_RECOMMEND_CAMPAIGN_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_GENDER_RECOMMEND_CAMPAIGN_ARN',
-            'mpc-user-gender-hrnn-cmp'
-        ),
-        region=AWS_PERSONALIZE_GENDER_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.campaign
-    )
-    AWS_PERSONALIZE_GENDER_RECOMMEND_SOLUTION_VERSION_ARN = build_personalize_resource_name(
-        os.environ.get(
-            'AWS_PERSONALIZE_GENDER_RECOMMEND_SOLUTION_VERSION_ARN',
-            'mpc-personalize-gender-hrnn-solution/cf120bb7'
-        ),
-        region=AWS_PERSONALIZE_GENDER_REGION,
-        resource_type=PERSONALIZE_RESOURCE_TYPE.solution
-    )
-    AWS_PERSONALIZE_GENDER_TRACKING_ID = os.environ.get(
-        'AWS_PERSONALIZE_GENDER_TRACKING_ID',
-        'd153e8c8-88c4-4723-b588-cc59f46f3b1f'
-    )
+    AWS_COGNITO_DEFAULT_REGION = os.environ.get('AWS_COGNITO_DEFAULT_REGION', 'eu-west-1')
 
     # ------------------------------------------------------------------------------------------------------------------
     #                                                   DYNAMO DB
@@ -290,18 +67,6 @@ class Config:
 
     # products
     AWS_ELASTICSEARCH_PRODUCTS = os.environ.get('AWS_ELASTICSEARCH_PRODUCTS', 'products')
-    AWS_ELASTICSEARCH_PRODUCTS_TRACKING_COUNTERS = os.environ.get(
-        'AWS_ELASTICSEARCH_PRODUCTS_TRACKING_COUNTERS',
-        'products_tracking_counters'
-    )
-    AWS_ELASTICSEARCH_PRODUCTS_TRACKING_USER_ACTION = os.environ.get(
-        'AWS_ELASTICSEARCH_PRODUCTS_TRACKING_USER_ACTION',
-        'products_tracking_user_action'
-    )
-    AWS_ELASTICSEARCH_PRODUCTS_TRACKING_USER_ACTION_PRODUCT_SNAPSHOT = os.environ.get(
-        'AWS_ELASTICSEARCH_PRODUCTS_TRACKING_USER_ACTION_PRODUCT_SNAPSHOT',
-        'products_tracking_user_action_product_snapshot'
-    )
 
     # Scored Products
     AWS_ELASTICSEARCH_SCORED_PRODUCTS = os.environ.get(
@@ -349,9 +114,6 @@ class Config:
         'AWS_ELASTICSEARCH_PERSONALIZATION_ORDERS',
         'personalization_orders'
     )
-
-    # delta cache
-    AWS_ELASTICSEARCH_DELTA_CACHE = os.environ.get('AWS_ELASTICSEARCH_DELTA_CACHE', 'delta_cache')
 
     # customer tiers
     AWS_ELASTICSEARCH_CUSTOMER_TIERS_TIERS = os.environ.get(
@@ -474,8 +236,8 @@ class Config:
                     'object_type': 'subscription_unsubscribed',
                     'queue_url': SQS_MPC_PORTAL_EMAIL_SUBSCRIPTION,
                 },
-                DELTA_CACHE_MESSAGE_TYPES.CACHE_UPDATE: {
-                    'object_type': DELTA_CACHE_MESSAGE_TYPES.CACHE_UPDATE,
+                SCORED_PRODUCT_MESSAGE_TYPE.SECRET_KEY: {
+                    'object_type': SCORED_PRODUCT_MESSAGE_TYPE.SECRET_KEY,
                     'queue_url': SQS_MPC_MPC_COMMON_URL,
                 },
                 SCORED_PRODUCT_MESSAGE_TYPE.CALCULATE_FOR_A_CUSTOMER: {
@@ -535,7 +297,7 @@ class Config:
     DTD_API_SKU_BASE_URL = os.environ.get('DTD_API_SKU_BASE_URL', 'https://cdt.runway.co.za/sku/')
 
     # Product filtering meta data
-    NEW_PRODUCT_THRESHOLD = int(os.environ.get('NEW_PRODUCT_THRESHOLD', 365))  # Should be 7 days in production
+    NEW_PRODUCT_THRESHOLD = int(os.environ.get('NEW_PRODUCT_THRESHOLD', 1600))  # Should be 7 days in production
     LAST_CHANCE_STOCK_THRESHOLD = os.environ.get('LAST_CHANCE_STOCK_THRESHOLD', 10)  # Stock Number
     LAST_CHANCE_END_DATE_THRESHOLD = os.environ.get('LAST_CHANCE_END_DATE_THRESHOLD', 30)
     PRODUCT_VISIT_LOG_MAX = os.environ.get('PRODUCT_VISIT_LOG_MAX', 10)
@@ -566,6 +328,14 @@ class Config:
     DATALAKE_USERTRACK_DELIVERY_STREAM_NAME = os.environ.get(
         'DATALAKE_USERTRACK_DELIVERY_STREAM_NAME')
 
+    # When you need to create sqs lambda function, consider the following
+    STAGES_TO_BIND_LAMBDA_WITH_AWS_RESOURCES = ['dev', 'stage', 'production']
+    if isinstance(os.environ.get('STAGES_TO_BIND_LAMBDA_WITH_AWS_RESOURCES'), str):
+        STAGES_TO_BIND_LAMBDA_WITH_AWS_RESOURCES += os.environ.get('STAGES_TO_BIND_LAMBDA_WITH_AWS_RESOURCES')
+
+    CALCULATE_SCORE_BATCH_SIZE = os.environ.get('CALCULATE_SCORE_BATCH_SIZE', 20)
+    SCORE_CALCULATE_INTERVAL = os.environ.get('SCORE_CALCULATE_INTERVAL', 20)
+    CALCULATE_SCORE_CHUNK_SIZE = os.environ.get('CALCULATE_SCORE_CHUNK_SIZE', 5)
 
 settings = Config()
 

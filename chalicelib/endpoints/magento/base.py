@@ -1,6 +1,6 @@
 from chalice import Blueprint
 from chalicelib.libs.models.mpc.Admin.Magento import Magento
-from chalicelib.libs.models.mpc.product_tracking import ProductsTrackingModel
+from chalicelib.libs.purchase.cart.service import CartAppService
 
 
 magento_blueprint = Blueprint(__name__)
@@ -43,10 +43,9 @@ def sync_user_data():
 def on_login():
     session_id = magento_blueprint.current_request.current_user.session_id
     user_id = magento_blueprint.current_request.current_user.id
-    user_tier = magento_blueprint.current_request.current_user.profile.tier
 
-    product_tracking_model = ProductsTrackingModel()
-    product_tracking_model.sync_guest_user_actions(session_id, user_id, user_tier)
+    cart_app_service = CartAppService()
+    cart_app_service.transfer_cart(session_id, user_id)
 
 
 @magento_blueprint.route('/on-logout', methods=['DELETE'], cors=True)

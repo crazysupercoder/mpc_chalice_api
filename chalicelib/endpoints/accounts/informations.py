@@ -9,8 +9,6 @@ from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
 from chalicelib.libs.models.mpc.Cms.Informations import InformationService
 from chalicelib.libs.models.ml.scored_products import ScoredProduct
 
-sqs_sender = SqsSenderImplementation()
-
 # @todo : move this form somewhere
 class AccountInformationForm(object):
     ATTRIBUTE_FIRST_NAME = 'first_name'
@@ -104,12 +102,6 @@ class AccountInformationForm(object):
                 self.__class__.__IDENTIFICATION_NUMBER_MAX_LENGTH
             ))
 
-        if self.identification_number is None:
-            attribute_name = self.__class__.ATTRIBUTE_IDENTIFICATION_NUMBER
-            errors[attribute_name]: List = errors.get(attribute_name) or []
-            errors[attribute_name].append('Please input "{}" number'.format(
-                self.__class__.ATTRIBUTES_MAP[attribute_name]
-            ))
         return errors
 
 
@@ -154,11 +146,11 @@ def register_informations(blue_print):
                 user.profile.informations = params
 
                 event = InformationsSqsSenderEvent(user.profile.informations)
-                sqs_sender.send(event)
+                SqsSenderImplementation().send(event)
                 return {'status': True, 'msg': 'Information has been updated successfully'}
             except Exception as e:
                 logger.log_exception(e)
-                return {'status': False, 'msg': 'Internal Server Error'}
+                return {'status': False, 'msg': str(e)}
 
     @blue_print.route('/informations/tier', methods=['GET'], cors=True)
     def tier():
@@ -174,11 +166,11 @@ def register_informations(blue_print):
         try:
             user.profile.add_information(params)
             event = InformationsSqsSenderEvent(user.profile.informations)
-            sqs_sender.send(event)
+            SqsSenderImplementation().send(event)
             return {'status': True}
         except Exception as e:
             logger.log_exception(e)
-            return {'status': False, 'msg': 'Internal Server Error'}
+            return {'status': False, 'msg': str(e)}
 
     @blue_print.route('/addresses', methods=['GET', 'POST'], cors=True)
     def addresses():
@@ -192,11 +184,11 @@ def register_informations(blue_print):
             try:
                 ret = user.profile.add_addresses(params)
                 event = InformationsSqsSenderEvent(user.profile.informations)
-                sqs_sender.send(event)
-                return {'status': True, 'updated': ret["Attributes"]["addresses"]}
+                SqsSenderImplementation().send(event)
+                return {'status': True, 'data': ret["Attributes"]["addresses"]}
             except Exception as e:
                 logger.log_exception(e)
-                return {'status': False, 'msg': 'Internal Server Error'}
+                return {'status': False, 'msg': str(e)}
 
     @blue_print.route('/add-address', methods=['POST'], cors=True)
     def addaddress():
@@ -206,35 +198,36 @@ def register_informations(blue_print):
         try:
             user.profile.add_address(param)
             event = InformationsSqsSenderEvent(user.profile.informations)
-            sqs_sender.send(event)
+            SqsSenderImplementation().send(event)
             ret = user.profile.informations['addresses']
-            return {'status': True, 'updated': ret}
+            return {'status': True, 'data': ret}
         except Exception as e:
             return {'status': False, 'msg': str(e)}
 
-    @blue_print.route('/get-address/{address_nickname}', methods=['GET'], cors=True)
-    def getaddress(address_nickname):
+    @blue_print.route('/get-address/{address_hash}', methods=['GET'], cors=True)
+    def getaddress(address_hash):
         logger = Logger()
         user = __get_current_user()
         try:
-            ret = user.profile.get_address(address_nickname)
+            ret = user.profile.get_address(address_hash)
             return {'status': True, 'data': ret}
         except Exception as e:
             logger.log_exception(e)
-            return {'status': False, 'msg': 'Internal Server Error'}
+            return {'status': False, 'msg': str(e)}
 
-    @blue_print.route('/delete-address/{address_nickname}', methods=['DELETE'], cors=True)
-    def deleteaddress(address_nickname):
+    @blue_print.route('/delete-address/{address_hash}', methods=['DELETE'], cors=True)
+    def deleteaddress(address_hash):
         logger = Logger()
         user = __get_current_user()
         try:
-            ret = user.profile.delete_address(address_nickname)
+            user.profile.delete_address(address_hash)
             event = InformationsSqsSenderEvent(user.profile.informations)
-            sqs_sender.send(event)
+            SqsSenderImplementation().send(event)
+            ret = user.profile.informations['addresses']
             return {'status': True, 'data': ret}
         except Exception as e:
             logger.log_exception(e)
-            return {'status': False, 'msg': 'Internal Server Error'}
+            return {'status': False, 'msg': str(e)}
 
     # @todo : this is a crutch
     # Currently Sign-Up process ignores backend and goes to the cognito directly, so we can't control input data.
@@ -290,7 +283,7 @@ def register_informations(blue_print):
             user.profile.informations = information
 
             event = InformationsSqsSenderEvent(user.profile.informations)
-            sqs_sender.send(event)
+            SqsSenderImplementation().send(event)
             return {'status': True}
         except BaseException as e:
             logger.log_exception(e)
@@ -312,7 +305,6 @@ def register_informations(blue_print):
         # This should be a api request, but it is impossible for now,
         # so we use sqs-communication.
 
-        from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
         from chalicelib.libs.purchase.customer.sqs import CrutchCustomerInfoRequestSqsSenderEvent
         event = CrutchCustomerInfoRequestSqsSenderEvent(user.email)
         SqsSenderImplementation().send(event)
@@ -321,6 +313,7 @@ def register_informations(blue_print):
     #This is used for test.
     @blue_print.route('/get_information_by_email', methods=['POST'], cors=True)
     def getInformation():
+        logger = Logger()
         try:
             email = str(__get_request().json_body.get('email') or '').strip()
             if not email:

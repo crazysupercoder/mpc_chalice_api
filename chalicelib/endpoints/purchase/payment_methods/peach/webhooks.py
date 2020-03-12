@@ -7,7 +7,7 @@ from chalicelib.libs.core.elastic import Elastic
 from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
 from chalicelib.libs.purchase.payment_methods.peach.webhooks import WebhooksFlowLog, WebhooksDecryptor
 from chalicelib.libs.purchase.payment_methods.peach.payments import MobicredPaymentMethod, CreditCardOrderPaymentMethod
-from chalicelib.libs.purchase.core.order import Order
+from chalicelib.libs.purchase.core import Order
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.order.sqs import OrderChangeSqsSenderEvent
 from chalicelib.libs.purchase.payment_methods.peach.cards import CreditCardsStorageImplementation
@@ -122,7 +122,7 @@ def register_payment_methods_peach_weebhoks(blueprint: Blueprint) -> None:
             webhooks_flow_log.write('Spending Credits...')
 
             """"""
-            from chalicelib.libs.purchase.core.checkout import Checkout
+            from chalicelib.libs.purchase.core import Checkout
             see = Checkout.__init__
             """"""
             # @TODO : refactoring : raw data usage
@@ -141,7 +141,7 @@ def register_payment_methods_peach_weebhoks(blueprint: Blueprint) -> None:
                 "customer_id": order.customer_id.value,
                 "amount": -order.credit_spent_amount.value,
                 "changed_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "order_number": order.order_number.value,
+                "order_number": order.number.value,
             })
             webhooks_flow_log.write('Done')
 

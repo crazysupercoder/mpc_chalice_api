@@ -1,11 +1,10 @@
 import boto3
-from typing import List
+from typing import List, Optional
 from warnings import warn
 from chalicelib.settings import settings
 from chalicelib.extensions import *
-from chalicelib.constants.sqs import DELTA_CACHE_MESSAGE_TYPES
-from chalicelib.libs.core.personalize import GenderPersonalize
 from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderImplementation
+from chalicelib.libs.models.mpc.Cms.user_states import CustomerStateModel, CustomerStateEntry
 from .Cms.profiles import Profile, UserQuestionModel, USER_QUESTION_TYPE
 from ....constants.sqs import SCORED_PRODUCT_MESSAGE_TYPE
 
@@ -48,27 +47,7 @@ class UserAnswerSqsSenderEvent(SqsSenderEventInterface):
         }
         return answer
 
-
 # ----------------------------------------------------------------------------------------------------------------------
-
-
-class DeltaCacheUpdateSqsSenderEvent(SqsSenderEventInterface):
-    def __init__(self, email):
-        self.__email = email
-
-    @classmethod
-    def _get_event_type(cls) -> str:
-        return DELTA_CACHE_MESSAGE_TYPES.CACHE_UPDATE
-
-    @property
-    def event_data(self) -> dict:
-        return {
-            'email': self.__email
-        }
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
 
 class User(object):
     COGNITO_USER_POOL_ID = settings.AWS_COGNITO_USER_POOL_ID
@@ -82,20 +61,24 @@ class User(object):
     __email = None
     __first_name = None
     __last_name = None
+    __state__: CustomerStateEntry = None
+
     def __init__(self, session_id, id=None, email=None, first_name=None, last_name=None, **kwargs):
         self.session_id = session_id
-        if id is not None:
-            if email is None:
-                self.__id = id
-                self.__data = User.find_user(id)
-            else:
-                self.__id = id
-                self.__email = email
-                self.__first_name = first_name
-                self.__last_name = last_name
+        if id:
+            self.__id = id
+            self.__email = email
+            self.__first_name = first_name
+            self.__last_name = last_name
         self.profile = Profile(
             session_id, customer_id=id,
             email=self.email)
+
+    @property
+    def data(self) -> dict:
+        if not isinstance(self.__data, dict):
+            self.__data = self.__class__.find_user(self.id)
+        return self.__data
 
     @property
     def cognito_client(self):
@@ -122,13 +105,29 @@ class User(object):
         return self.__last_name
 
     @property
+    def state(self) -> Optional[CustomerStateEntry]:
+        if not self.id:
+            return None
+        if not isinstance(self.__state__, CustomerStateEntry):
+            self.__state__ = CustomerStateModel(self.id, self.email).state
+        return self.__state__
+
+    @property
+    def is_personalized(self) -> bool:
+        if isinstance(self.state, CustomerStateEntry):
+            return self.state.is_personalized
+        else:
+            return False
+
+    @property
     def email(self):
-        if self.__data is not None:
-            for item in self.__data.get('UserAttributes', []):
+        if self.__email:
+            return self.__email
+
+        if self.data:
+            for item in self.data.get('UserAttributes', []):
                 if item.get('Name') == 'email':
                     return item.get('Value', self.DEFAULT_EMAIL)
-        if self.__email is not None:
-            return self.__email
         return self.DEFAULT_EMAIL
 
     @property
@@ -156,16 +155,14 @@ class User(object):
 
     @property
     def gender(self):
-        if self.__data is not None:
-            for item in self.__data.get('UserAttributes', []):
+        if self.data is not None:
+            for item in self.data.get('UserAttributes', []):
                 if item.get('Name') in ['gender', 'custom:gender']:
                     return item.get('Value', self.DEFAULT_GENDER)
         elif self.profile.gender is not None:
             return self.profile.gender
         else:
-            response = GenderPersonalize.get_recommend_ids(customer_id=self.email, size=1)
-            genders = [item['itemId'] for item in response.get('itemList', [])]
-            return genders[0] if len(genders) > 0 else 'LADIES'
+            return 'LADIES'
 
     @property
     def groups(self) -> List[str]:
@@ -197,14 +194,14 @@ class User(object):
 
     @classmethod
     def send_calculate_product_score_for_customers(cls, emails: List[str] = None) -> bool:
-        if not emails:
+        if emails is None:
             emails = cls.get_all_emails()
         events = list()
         for email in emails:
             events.append(ScoredProductSqsSenderEvent(
                 SCORED_PRODUCT_MESSAGE_TYPE.CALCULATE_FOR_A_CUSTOMER,
                 email=email))
-        SqsSenderImplementation().send(events)
+        SqsSenderImplementation().send_batch(events)
 
     @classmethod
     def get_customer_attributes(cls, attrs: List[str]) -> List[dict]:
@@ -349,8 +346,6 @@ class User(object):
 
         # Save answers to dynamoDB
         if self.profile.save_answer(question_id, body):
-            # Update Delta Cache
-            self.send_delta_cache_update_message_to_sqs()
             # Send answer to SQS for Portal
             self.send_answer_to_sqs(body)
             self.__class__.send_calculate_product_score_for_customers(emails=[self.email])
@@ -363,19 +358,6 @@ class User(object):
 
         event = UserAnswerSqsSenderEvent(self.id, self.email, answer)
         SqsSenderImplementation().send(event)
-
-    def send_delta_cache_update_message_to_sqs(self) -> bool:
-        if self.is_anyonimous:
-            return False
-
-        try:
-            event = DeltaCacheUpdateSqsSenderEvent(self.email)
-            SqsSenderImplementation().send(event)
-        except Exception as e:
-            print(str(e))
-            return False
-
-        return True
 
     def sync_user_attributes(self, attributes, **kwargs):
         if self.is_anyonimous:

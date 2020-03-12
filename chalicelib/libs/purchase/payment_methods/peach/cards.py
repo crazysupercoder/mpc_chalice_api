@@ -4,6 +4,7 @@ from typing import Tuple, Optional
 from chalicelib.extensions import *
 from chalicelib.settings import settings
 from chalicelib.libs.core.elastic import Elastic
+from chalicelib.libs.models.mpc.base import DynamoModel
 from chalicelib.libs.core.reflector import Reflector
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -294,9 +295,110 @@ class _CreditCardsElasticStorage(CreditCardsStorageInterface):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class _CreditCardsStorageDynamoDb(CreditCardsStorageInterface):
+    __ENTITY_PROPERTY_TOKEN = '__token'
+    __ENTITY_PROPERTY_CUSTOMER_ID = '__customer_id'
+    __ENTITY_PROPERTY_BRAND = '__brand'
+    __ENTITY_PROPERTY_NUMBER_HIDDEN = '__number_hidden'
+    __ENTITY_PROPERTY_EXPIRES = '__expires'
+    __ENTITY_PROPERTY_HOLDER_NAME = '__holder_name'
+    __ENTITY_PROPERTY_IS_VERIFIED = '__is_verified'
+    __ENTITY_PROPERTY_CREATED_AT = '__created_at'
+
+    def __init__(self):
+        self.__dynamo_db = DynamoModel(settings.AWS_DYNAMODB_CMS_TABLE_NAME)
+        self.__dynamo_db.PARTITION_KEY = 'PURCHASE_CUSTOMER_CREDIT_CARDS'
+        self.__reflector = Reflector()
+
+    def __restore(self, row: dict) -> CreditCard:
+        card = self.__reflector.construct(CreditCard, {
+            self.__class__.__ENTITY_PROPERTY_TOKEN: row['sk'],
+            self.__class__.__ENTITY_PROPERTY_CUSTOMER_ID: row['customer_id'],
+            self.__class__.__ENTITY_PROPERTY_BRAND: row['brand'],
+            self.__class__.__ENTITY_PROPERTY_NUMBER_HIDDEN: row['number_hidden'],
+            self.__class__.__ENTITY_PROPERTY_EXPIRES: (
+                datetime.date(
+                    year=int('20' + row['expires'][0:2]),
+                    month=12,
+                    day=31
+                )
+            ) if int(row['expires'][2:4]) == 12 else (
+                datetime.date(
+                    year=int('20' + row['expires'][0:2]),
+                    month=int(row['expires'][2:4]) + 1,
+                    day=1
+                ) - datetime.timedelta(days=1)
+            ),
+            self.__class__.__ENTITY_PROPERTY_HOLDER_NAME: row['holder_name'],
+            self.__class__.__ENTITY_PROPERTY_IS_VERIFIED: row['is_verified'],
+            self.__class__.__ENTITY_PROPERTY_CREATED_AT: datetime.datetime.strptime(
+                row['created_at'],
+                '%Y-%m-%d %H:%M:%S'
+            )
+        })
+
+        return card
+
+    def get_by_token(self, token: str) -> Optional[CreditCard]:
+        if not isinstance(token, str):
+            raise ArgumentTypeException(self.get_by_token, 'token', token)
+        elif not token.strip():
+            raise ArgumentCannotBeEmptyException(self.get_by_token, 'token')
+
+        row = self.__dynamo_db.find_item(token)
+        return self.__restore(row) if row else None
+
+    def get_all_by_customer(self, customer_id: str) -> Tuple[CreditCard]:
+        if not isinstance(customer_id, str):
+            raise ArgumentTypeException(self.get_all_by_customer, 'customer_id', customer_id)
+        elif not customer_id.strip():
+            raise ArgumentCannotBeEmptyException(self.get_all_by_customer, 'customer_id')
+
+        items = self.__dynamo_db.find_by_attribute('customer_id', customer_id)
+        result = [self.__restore(item) for item in items]
+        return tuple(result)
+
+    def save(self, card: CreditCard) -> None:
+        if not isinstance(card, CreditCard):
+            raise ArgumentTypeException(self.save, 'card', card)
+
+        data = self.__reflector.extract(card, [
+            self.__class__.__ENTITY_PROPERTY_TOKEN,
+            self.__class__.__ENTITY_PROPERTY_CUSTOMER_ID,
+            self.__class__.__ENTITY_PROPERTY_BRAND,
+            self.__class__.__ENTITY_PROPERTY_NUMBER_HIDDEN,
+            self.__class__.__ENTITY_PROPERTY_EXPIRES,
+            self.__class__.__ENTITY_PROPERTY_HOLDER_NAME,
+            self.__class__.__ENTITY_PROPERTY_IS_VERIFIED,
+            self.__class__.__ENTITY_PROPERTY_CREATED_AT,
+        ])
+
+        self.__dynamo_db.put_item(data[self.__class__.__ENTITY_PROPERTY_TOKEN], {
+            'customer_id': data[self.__class__.__ENTITY_PROPERTY_CUSTOMER_ID],
+            'brand': data[self.__class__.__ENTITY_PROPERTY_BRAND],
+            'number_hidden': data[self.__class__.__ENTITY_PROPERTY_NUMBER_HIDDEN],
+            'expires': data[self.__class__.__ENTITY_PROPERTY_EXPIRES].strftime('%y%m'),
+            'holder_name': data[self.__class__.__ENTITY_PROPERTY_HOLDER_NAME],
+            'is_verified': data[self.__class__.__ENTITY_PROPERTY_IS_VERIFIED],
+            'created_at': data[self.__class__.__ENTITY_PROPERTY_CREATED_AT].strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+    def remove(self, card: CreditCard) -> None:
+        if not isinstance(card, CreditCard):
+            raise ArgumentTypeException(self.remove, 'card', card)
+
+        if not self.__dynamo_db.find_item(card.token):
+            raise ArgumentValueException('Card #{} is already Removed!'.format(card.token))
+
+        self.__dynamo_db.delete_item(card.token)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 class CreditCardsStorageImplementation(CreditCardsStorageInterface):
     def __init__(self):
-        self.__storage = _CreditCardsElasticStorage()
+        self.__storage = _CreditCardsStorageDynamoDb()
 
     def get_by_token(self, token: str) -> Optional[CreditCard]:
         return self.__storage.get_by_token(token)
@@ -309,6 +411,7 @@ class CreditCardsStorageImplementation(CreditCardsStorageInterface):
 
     def remove(self, card: CreditCard) -> None:
         self.__storage.remove(card)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 

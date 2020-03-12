@@ -2,8 +2,7 @@ import datetime
 from chalicelib.extensions import *
 from chalice import Blueprint
 from chalicelib.settings import Config
-from chalicelib.libs.purchase.core.order import Order
-from chalicelib.libs.purchase.core.customer import Customer
+from chalicelib.libs.purchase.core import Order, CustomerInterface
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
 from chalicelib.libs.models.mpc.Product import Product as MpcProducts
@@ -27,11 +26,11 @@ def register_orders(blueprint: Blueprint) -> None:
         customer_storage = CustomerStorageImplementation()
         mpc_products = MpcProducts()
 
-        customer = customer_storage.load(order.customer_id)
+        customer = customer_storage.get_by_id(order.customer_id)
         delivery_address = order.delivery_address
 
         order_items_data = []
-        for order_item in order.order_items:
+        for order_item in order.items:
             product = mpc_products.getRawDataBySimpleSku(order_item.simple_sku.value, False)
             size = tuple(filter(lambda s: s['rs_simple_sku'] == order_item.simple_sku.value, product['sizes']))[0]
 
@@ -104,17 +103,17 @@ def register_orders(blueprint: Blueprint) -> None:
             customer_last_name = customer_name_str.replace(customer_first_name, '', 1).strip()
 
         customer_genders_map = {
-            Customer.Gender.MALE: 'male',
-            Customer.Gender.FEMALE: 'female',
+            CustomerInterface.Gender.MALE: 'male',
+            CustomerInterface.Gender.FEMALE: 'female',
         }
 
         data = {
-            'increment_id': order.order_number.value,
+            'increment_id': order.number.value,
             'status': order.status.value,
             'created_at': __to_utc(order.created_at).strftime('%Y-%m-%d %H:%M:%S'),
             'updated_at': __to_utc(order.updated_at).strftime('%Y-%m-%d %H:%M:%S'),
             'payment': {
-                'entity_id': order.order_number.value,
+                'entity_id': order.number.value,
                 'method': order.payment_method.descriptor,
                 'additional_information': order.payment_method.extra_data,
                 'base_amount_paid': order.total_current_cost_paid.value - order.credit_spent_amount.value,
@@ -128,7 +127,7 @@ def register_orders(blueprint: Blueprint) -> None:
             } for status_change in order.status_history],
 
             'invoice': [{
-                'entity_id': order.order_number.value,
+                'entity_id': order.number.value,
                 'state': 3 if order.was_closed or order.was_cancelled else 2 if order.was_paid else 1,
                 'base_grand_total': order.total_current_cost_paid.value - order.credit_spent_amount.value,
                 'base_tax_amount': (
@@ -145,7 +144,7 @@ def register_orders(blueprint: Blueprint) -> None:
                     item.product_current_price.value * (
                         (item.qty_ordered.value - item.qty_cancelled_before_payment.value) if order.was_paid else 0
                     )
-                    for item in order.order_items
+                    for item in order.items
                 ]),
                 'base_shipping_amount': order.delivery_cost.value,
                 'base_customer_balance_amount': order.credit_spent_amount.value,
@@ -159,7 +158,7 @@ def register_orders(blueprint: Blueprint) -> None:
 
             'addresses': [{
                 # magento address id. We use only one, so can set order number.
-                'entity_id': order.order_number.value,
+                'entity_id': order.number.value,
                 # @todo : we have only one address in order, so let it be 'shipping'
                 'address_type': 'shipping',
 
@@ -180,7 +179,7 @@ def register_orders(blueprint: Blueprint) -> None:
 
             'base_subtotal_incl_tax': sum([
                 item.product_current_price.value * item.qty_ordered.value
-                for item in order.order_items
+                for item in order.items
             ]),
             'base_customer_balance_invoiced': order.credit_spent_amount.value,
         }

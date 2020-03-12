@@ -4,7 +4,82 @@ from requests_aws4auth import AWS4Auth
 from elasticsearch import Elasticsearch, RequestsHttpConnection, helpers
 from elasticsearch_dsl import Search, A
 from ....settings import settings
-from .demo_orders import OrderAggregation
+
+
+class OrderAggregation:
+    genders: List[str] = []
+    colors: List[str] = []
+    sizes: List[str] = []
+    product_types: List[str] = []
+    brands: List[str] = []
+    product_count: int = 500
+
+    def __init__(self, product_count: int = 500):
+        self.product_count = product_count
+
+    def append_gender(self, gender: str):
+        if gender.lower() not in self.genders:
+            self.genders.append(gender.lower())
+
+    def append_color(self, color: str):
+        if type(color) is str:
+            color = color.lower()
+        if color not in self.colors:
+            self.colors.append(color)
+
+    def append_size(self, size: str):
+        if type(size) == str:
+            size = size.lower()
+        if size not in self.sizes:
+            self.sizes.append(size)
+
+    def append_product_type(self, product_type: str):
+        if product_type.lower() not in self.product_types:
+            self.product_types.append(product_type.lower())
+
+    def append_brand(self, brand: str):
+        if brand.lower() not in self.brands:
+            self.brands.append(brand.lower())
+
+    @property
+    def gender_score(self):
+        return self.product_count / max(1, len(self.genders))
+
+    @property
+    def color_score(self):
+        return self.product_count / max(1, len(self.colors))
+
+    @property
+    def size_score(self):
+        return self.product_count / max(1, len(self.sizes))
+
+    @property
+    def brand_score(self):
+        return self.product_count / max(1, len(self.brands))
+
+    @property
+    def product_type_score(self):
+        return self.product_count / max(1, len(self.product_types))
+
+    @property
+    def score_factors(self) -> dict:
+        return {
+            "gender": {
+                "values": self.genders,
+                "score": self.gender_score},
+            "rs_color": {
+                "values": self.colors,
+                "score": self.color_score},
+            "product_size_attribute": {
+                "values": self.product_types,
+                "score": self.product_type_score},
+            "sizes.size.size": {
+                "values": self.sizes,
+                "score": self.size_score},
+            "manufacturer": {
+                "values": self.brands,
+                "score": self.brand_score},
+        }
 
 
 class Order(object):
@@ -63,11 +138,6 @@ class Order(object):
     def convert(
             self, products, personalize=False, customer_id='BLANK',
             **kwargs) -> List[dict]:
-        if personalize:
-            config_skus = ConfigSkuPersonalize.get_personalized_ranking(
-                [item['rs_sku'] for item in products], customer_id=customer_id)
-            products = sorted(products, key=lambda x: config_skus.index(x['rs_sku']))
-
         return [self.convert_item(item) for item in products]
 
     def get_order_aggregation(

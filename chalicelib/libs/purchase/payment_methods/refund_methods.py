@@ -1,5 +1,5 @@
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.payments import RefundMethodAbstract
+from chalicelib.libs.purchase.core import RefundMethodAbstract
 
 
 class StoreCreditRefundMethod(RefundMethodAbstract):

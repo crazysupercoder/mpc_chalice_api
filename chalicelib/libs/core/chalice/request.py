@@ -8,15 +8,21 @@ class MPCRequest(Request):
     RWS_HEADER_EMAIL = 'email'
     RWS_HEADER_FIRST_NAME = 'first_name'
     RWS_HEADER_LAST_NAME = 'last_name'
+
+    __current_user__: User = None
     
     @property
     def is_authenticated(self):
         return self.rws_token is not None
 
     @property
-    def current_user(self):
-        return User(self.session_id, id=self.rws_token, 
-        email=self.rws_email, first_name=self.rws_first_name, last_name=self.rws_last_name)
+    def current_user(self) -> User:
+        if not isinstance(self.__current_user__, User):
+            self.__current_user__ = User(
+                self.session_id, id=self.rws_token, 
+                email=self.rws_email, first_name=self.rws_first_name,
+                last_name=self.rws_last_name)
+        return self.__current_user__
 
     @property
     def rws_token(self):
@@ -58,10 +64,10 @@ class MPCRequest(Request):
 
     @property
     def size(self):
-        if self.query_params is None:
-            return 6
+        if not self.query_params or not self.query_params.get('size'):
+            return 20
         else:
-            return int(self.query_params.get('size', 6))
+            return int(self.query_params['size'])
 
     @property
     def gender(self):

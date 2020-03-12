@@ -14,8 +14,7 @@ from chalicelib.libs.core.file_storage import FileStorageImplementation
 from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.models.mpc.user import User
-from chalicelib.libs.purchase.core.values import Id, OrderNumber, SimpleSku, Cost, Qty
-from chalicelib.libs.purchase.core.returns import ReturnRequest
+from chalicelib.libs.purchase.core import Id, OrderNumber, SimpleSku, Cost, Qty, ReturnRequest
 from chalicelib.libs.purchase.returns.storage import ReturnRequestStorageImplementation
 from chalicelib.libs.purchase.order.storage import OrderStorageImplementation
 from chalicelib.libs.purchase.product.storage import ProductStorageImplementation
@@ -63,7 +62,7 @@ def register_customer_returns(blueprint: Blueprint):
         _orders = orders_storage.get_all_by_numbers(tuple(_order_numbers))
         for _order_number in _order_numbers:
             for _order in _orders:
-                if _order.order_number.value == _order_number.value:
+                if _order.number.value == _order_number.value:
                     orders_map[_order_number.value] = _order
                     break
             else:
@@ -199,11 +198,11 @@ def register_customer_returns(blueprint: Blueprint):
         }
 
         for order in orders_storage.get_all_for_customer(Id(__get_user().id)):
-            if not order.can_be_returned:
+            if not order.is_returnable:
                 continue
 
             items = []
-            for item in order.order_items:
+            for item in order.items:
                 product = products_map.get(item.simple_sku.value) or products_storage.load(item.simple_sku)
                 products_map[item.simple_sku.value] = product
 
@@ -219,9 +218,9 @@ def register_customer_returns(blueprint: Blueprint):
                 })
 
             orders.append({
-                'order_number': order.order_number.value,
+                'order_number': order.number.value,
                 'ordered_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'can_be_returned_till': order.can_be_returned_till.strftime('%Y-%m-%d %H:%M:%S'),
+                'can_be_returned_till': order.is_returnable_till.strftime('%Y-%m-%d %H:%M:%S'),
                 'items': items,
                 'refund_methods': payment_refund_methods_map[order.payment_method.descriptor]
             })
@@ -542,7 +541,7 @@ def register_customer_returns(blueprint: Blueprint):
         for return_item in return_request.items:
             order = modified_orders.get(return_item.order_number.value) or orders_storage.load(return_item.order_number)
             order.request_return(return_item.simple_sku, return_item.qty)
-            modified_orders[order.order_number.value] = order
+            modified_orders[order.number.value] = order
 
         # 4. Save changes
         # -------------------------------
@@ -558,9 +557,9 @@ def register_customer_returns(blueprint: Blueprint):
 
         __log_flow('Saving Orders...')
         for order in tuple(modified_orders.values()):
-            __log_flow('Saving Order #{}...'.format(order.order_number.value))
+            __log_flow('Saving Order #{}...'.format(order.number.value))
             orders_storage.save(order)
-            __log_flow('Saving Order #{} - Done!'.format(order.order_number.value))
+            __log_flow('Saving Order #{} - Done!'.format(order.number.value))
         __log_flow('Saving Orders - Done!')
 
         # 5. Send SQS
@@ -613,7 +612,7 @@ def register_customer_returns(blueprint: Blueprint):
         if (
             not order
             or not len([item for item in return_request.items if item.order_number == order_number])
-            or not len([item for item in order.order_items if item.simple_sku == simple_sku])
+            or not len([item for item in order.items if item.simple_sku == simple_sku])
         ):
             raise NotFoundError('Product "{}" is not requested in Return Request #{} for Order #{}!'.format(
                 simple_sku.value,

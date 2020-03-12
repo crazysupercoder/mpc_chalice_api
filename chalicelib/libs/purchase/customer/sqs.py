@@ -1,11 +1,11 @@
 import uuid
 from chalicelib.settings import settings
 from chalicelib.libs.core.elastic import Elastic
+from chalicelib.libs.models.mpc.base import DynamoModel
 from chalicelib.libs.core.logger import Logger
 from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface
 from chalicelib.utils.sqs_handlers.base import SqsMessage, SqsHandlerInterface
-from chalicelib.libs.purchase.core.values import Id, Name, Percentage
-from chalicelib.libs.purchase.core.customer import CustomerTier
+from chalicelib.libs.purchase.core import Id, Name, Percentage, CustomerTier
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
 from chalicelib.libs.purchase.customer.storage import CustomerTierStorageImplementation
 from chalicelib.libs.message.base import Message, MessageStorageImplementation
@@ -50,9 +50,9 @@ class CustomerTiersCustomersSqsHandler(SqsHandlerInterface):
 
         """"""
         # @todo : refactoring
-        from chalicelib.libs.purchase.core.customer import Customer
+        from chalicelib.libs.purchase.core import CustomerInterface
         from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
-        see = Customer.tier
+        see = CustomerInterface.tier
         see = CustomerStorageImplementation.save
         """"""
         self.__elastic = Elastic(
@@ -114,22 +114,25 @@ class FbucksChargeSqsHandler(SqsHandlerInterface):
         self.__orders_storage = OrderStorageImplementation()
         self.__logger = Logger()
 
-        """
-        curl -X DELETE localhost:9200/fbucks_handled_orders
-        curl -X PUT localhost:9200/fbucks_handled_orders -H "Content-Type: application/json" -d'{
-            "mappings": {
-                "fbucks_handled_orders": {
-                    "properties": {
-                        "handled_at": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"}
-                    }
-                }
-            }
-        }'
-        """
-        self.__fbucks_handled_orders_elastic = Elastic(
-            settings.AWS_ELASTICSEARCH_FBUCKS_HANDLED_ORDERS,
-            settings.AWS_ELASTICSEARCH_FBUCKS_HANDLED_ORDERS,
-        )
+        # """
+        # curl -X DELETE localhost:9200/fbucks_handled_orders
+        # curl -X PUT localhost:9200/fbucks_handled_orders -H "Content-Type: application/json" -d'{
+        #     "mappings": {
+        #         "fbucks_handled_orders": {
+        #             "properties": {
+        #                 "handled_at": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"}
+        #             }
+        #         }
+        #     }
+        # }'
+        # """
+        # self.__fbucks_handled_orders_elastic = Elastic(
+        #     settings.AWS_ELASTICSEARCH_FBUCKS_HANDLED_ORDERS,
+        #     settings.AWS_ELASTICSEARCH_FBUCKS_HANDLED_ORDERS,
+        # )
+        self.__fbucks_handled_orders_dynamo_db = DynamoModel(settings.AWS_DYNAMODB_CMS_TABLE_NAME)
+        self.__fbucks_handled_orders_dynamo_db.PARTITION_KEY = 'PURCHASE_FBUCKS_REWARD_HANDLED_ORDERS'
+
 
         # Attention!
         # We can get current customer's amount as a sum of all changes by customer_id
@@ -175,7 +178,7 @@ class FbucksChargeSqsHandler(SqsHandlerInterface):
     def handle(self, sqs_message: SqsMessage) -> None:
         import uuid
         import datetime
-        from chalicelib.libs.purchase.core.order import Order
+        from chalicelib.libs.purchase.core import Order
 
         order_number_values = sqs_message.message_data['order_numbers']
         for order_number_value in order_number_values:
@@ -183,7 +186,8 @@ class FbucksChargeSqsHandler(SqsHandlerInterface):
                 now_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 # skip duplicates
-                if self.__fbucks_handled_orders_elastic.get_data(order_number_value):
+                # if self.__fbucks_handled_orders_elastic.get_data(order_number_value):
+                if self.__fbucks_handled_orders_dynamo_db.find_item(order_number_value):
                     self.__logger.log_simple('{}: Fbucks for order #{} already earned!'.format(
                         self.handle.__qualname__,
                         order_number_value
@@ -192,12 +196,11 @@ class FbucksChargeSqsHandler(SqsHandlerInterface):
 
                 # ignore orders without fbucks amounts
                 order = self.__orders_storage.load(Order.Number(order_number_value))
-                fbucks_amount = order.total_fbucks_amount.value
+                fbucks_amount = order.total_fbucks_earnings.value
                 if fbucks_amount == 0:
                     # remember order as handled
-                    self.__fbucks_handled_orders_elastic.create(order_number_value, {
-                        'handled_at': now_string,
-                    })
+                    # self.__fbucks_handled_orders_elastic.create(order_number_value, {'handled_at': now_string})
+                    self.__fbucks_handled_orders_dynamo_db.put_item(order_number_value, {'handled_at': now_string})
                     continue
 
                 # earn fbucks
@@ -215,20 +218,19 @@ class FbucksChargeSqsHandler(SqsHandlerInterface):
                 })
 
                 # remember order as handled
-                self.__fbucks_handled_orders_elastic.create(order_number_value, {
-                    'handled_at': now_string,
-                })
+                # self.__fbucks_handled_orders_elastic.create(order_number_value, {'handled_at': now_string})
+                self.__fbucks_handled_orders_dynamo_db.put_item(order_number_value, {'handled_at': now_string})
 
                 # notify (silently)
                 try:
-                    customer = self.__customer_storage.load(order.customer_id)
+                    customer = self.__customer_storage.get_by_id(order.customer_id)
                     self.__messages_storage.save(Message(
                         str(uuid.uuid4()),
                         customer.email.value,
                         'F-Bucks has been Earned!',
                         'You have earned {} F-Bucks by your Order #{}'.format(
                             fbucks_amount,
-                            order.order_number.value
+                            order.number.value
                         )
                     ))
                 except BaseException as e:
@@ -250,32 +252,35 @@ class CrutchCustomerSpentAmountSqsHandler(SqsHandlerInterface):
     """
 
     def __init__(self):
-        """
-        curl -X DELETE localhost:9200/customer_tiers_customer_info_spent_amount
-        curl -X PUT localhost:9200/customer_tiers_customer_info_spent_amount -H "Content-Type: application/json" -d'{
-            "mappings": {
-                "customer_tiers_customer_info_spent_amount": {
-                    "properties": {
-                        "spent_amount": {"type": "float"}
-                    }
-                }
-            }
-        }'
-        """
-        self.__elastic = Elastic(
-            settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT,
-            settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT
-        )
+        # """
+        # curl -X DELETE localhost:9200/customer_tiers_customer_info_spent_amount
+        # curl -X PUT localhost:9200/customer_tiers_customer_info_spent_amount -H "Content-Type: application/json" -d'{
+        #     "mappings": {
+        #         "customer_tiers_customer_info_spent_amount": {
+        #             "properties": {
+        #                 "spent_amount": {"type": "float"}
+        #             }
+        #         }
+        #     }
+        # }'
+        # """
+        # self.__elastic = Elastic(
+        #     settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT,
+        #     settings.AWS_ELASTICSEARCH_CUSTOMER_TIERS_CUSTOMER_INFO_SPENT_AMOUNT
+        # )
+        self.__dynamo_db = DynamoModel(settings.AWS_DYNAMODB_CMS_TABLE_NAME)
+        self.__dynamo_db.PARTITION_KEY = 'PURCHASE_CUSTOMER_SPENT_AMOUNT'
 
     def handle(self, sqs_message: SqsMessage) -> None:
         for item in sqs_message.message_data.get('items'):
             customer_email = str(item['customer_email'])
             spent_amount = int(item['spent_amount'])
-            if self.__elastic.get_data(customer_email):
-                self.__elastic.update_data(customer_email, {'doc': {'spent_amount': spent_amount}})
-            else:
-                self.__elastic.create(customer_email, {'spent_amount': spent_amount})
 
+            # if self.__elastic.get_data(customer_email):
+            #     self.__elastic.update_data(customer_email, {'doc': {'spent_amount': spent_amount}})
+            # else:
+            #     self.__elastic.create(customer_email, {'spent_amount': spent_amount})
+            self.__dynamo_db.put_item(customer_email, {'spent_amount': spent_amount})
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -368,9 +373,9 @@ class CrutchCustomerInfoRequestAnswerSqsHandler(SqsHandlerInterface):
         # assign user to tier
         """"""
         # @todo : refactoring
-        from chalicelib.libs.purchase.core.customer import Customer
+        from chalicelib.libs.purchase.core import CustomerInterface
         from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation
-        see = Customer.tier
+        see = CustomerInterface.tier
         see = CustomerStorageImplementation.save
         """"""
         customer_email = sqs_message.message_data['customer_email']

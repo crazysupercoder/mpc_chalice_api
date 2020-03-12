@@ -1,7 +1,6 @@
 from typing import List, Tuple
 from chalicelib.extensions import *
-from chalicelib.libs.purchase.core.values import Id, DeliveryAddress
-from chalicelib.libs.purchase.core.customer import CustomerDeliveryAddress, Customer, CustomerStorageInterface
+from chalicelib.libs.purchase.core import Id, DeliveryAddress, CustomerInterface, CustomerStorageInterface
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -101,9 +100,9 @@ class CustomerDeliveryAddressAppService(object):
 
         self.__customer_storage = customer_storage
 
-    def __get_customer(self, user_id: str) -> Customer:
+    def __get_customer(self, user_id: str) -> CustomerInterface:
         customer_id = Id(user_id)
-        customer = self.__customer_storage.load(customer_id)
+        customer = self.__customer_storage.get_by_id(customer_id)
         if not customer:
             raise ApplicationLogicException('Customer does not exist!')
 
@@ -120,7 +119,7 @@ class CustomerDeliveryAddressAppService(object):
                 self.add_delivery_address.__qualname__
             ))
 
-        customer_delivery_address = CustomerDeliveryAddress(
+        customer_delivery_address = CustomerInterface.DeliveryAddress(
             form.address_type,
             DeliveryAddress(
                 form.recipient_name,
@@ -154,7 +153,7 @@ class CustomerDeliveryAddressAppService(object):
                 self.edit_delivery_address.__qualname__
             ))
 
-        customer_delivery_address = CustomerDeliveryAddress(
+        customer_delivery_address = CustomerInterface.DeliveryAddress(
             form.address_type,
             DeliveryAddress(
                 form.recipient_name,

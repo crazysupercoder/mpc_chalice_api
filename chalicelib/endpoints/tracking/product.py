@@ -2,7 +2,7 @@ from chalice import Blueprint
 from chalicelib.extensions import *
 from chalicelib.libs.models.mpc.Product import Product as MpcProduct
 from chalicelib.libs.models.mpc.product_tracking import (
-    ViewAction, ClickAction, VisitAction, ProductsTrackingModel)
+    ViewAction, ClickAction, VisitAction)
 from chalicelib.libs.models.ml.scored_products import ScoredProduct
 
 
@@ -14,9 +14,6 @@ def register_product(blueprint: Blueprint):
     @blueprint.route('/product/view', methods=['POST'], cors=True)
     def track_view():
         products_model = MpcProduct()
-        # tracking_model = ProductsTrackingModel()
-
-        # NEW VERSION
         scored_product = ScoredProduct()
 
         try:
@@ -37,6 +34,13 @@ def register_product(blueprint: Blueprint):
 
             session_id = blueprint.current_request.session_id
             user_id = blueprint.current_request.customer_id
+
+            if not user_id:
+                return {
+                    'Code': 'Failure',
+                    'Message': 'Not authenticated',
+                }
+
             user_tier_data = blueprint.current_request.current_user.profile.tier
             raw_products = products_model.get_raw_data_by_skus([
                 item.get('config_sku') for item in product_data])
@@ -46,14 +50,13 @@ def register_product(blueprint: Blueprint):
             for product_item in product_data:
                 config_sku = product_item.get('config_sku')
                 version = product_item.get('version')
-                personalize_score = product_item.get('ps')
                 question_score = product_item.get('qs')
                 order_score = product_item.get('rs')
                 tracking_score = product_item.get('ts')
-                personalize_weight = product_item.get('pw')
                 question_weight = product_item.get('qw')
                 order_weight = product_item.get('rw')
                 tracking_weight = product_item.get('tw')
+                percentage_score = product_item.get('percentage_score', -1)
                 position_on_page = product_item.get('position_on_page')
 
                 product_data = raw_products.get(config_sku)
@@ -68,18 +71,16 @@ def register_product(blueprint: Blueprint):
                         user_id,
                         user_tier_data,
                         weight_version=version,
-                        personalize_score=personalize_score,
-                        personalize_weight=personalize_weight,
                         question_score=question_score,
                         question_weight=question_weight,
                         order_score=order_score,
                         order_weight=order_weight,
                         tracking_score=tracking_score,
                         tracking_weight=tracking_weight,
+                        percentage_score=percentage_score,
                     )
                 )
 
-            # tracking_model.track(actions)
             scored_product.track(actions)
 
             return {
@@ -96,22 +97,19 @@ def register_product(blueprint: Blueprint):
     @blueprint.route('/product/click', methods=['POST'], cors=True)
     def track_click():
         products_model = MpcProduct()
-        # tracking_model = ProductsTrackingModel()
-
         scored_product = ScoredProduct()
 
         try:
             request_data = blueprint.current_request.json_body
             config_sku = request_data.get('config_sku')
             weight_version = request_data.get('version')
-            personalize_score = request_data.get('ps')
             question_score = request_data.get('qs')
             order_score = request_data.get('rs')
             tracking_score = request_data.get('ts')
-            personalize_weight = request_data.get('pw')
             question_weight = request_data.get('qw')
             order_weight = request_data.get('rw')
             tracking_weight = request_data.get('tw')
+            percentage_score = request_data.get('percentage_score', -1)
             position_on_page = request_data.get('position_on_page')
 
             if not isinstance(config_sku, str) or not config_sku.strip():
@@ -126,6 +124,13 @@ def register_product(blueprint: Blueprint):
 
             session_id = blueprint.current_request.session_id
             user_id = blueprint.current_request.customer_id
+
+            if not user_id:
+                return {
+                    'Code': 'Failure',
+                    'Message': 'Not authenticated',
+                }
+
             user_tier_data = blueprint.current_request.current_user.profile.tier
 
             scored_product.track(ClickAction(
@@ -135,14 +140,13 @@ def register_product(blueprint: Blueprint):
                 user_id,
                 user_tier_data,
                 weight_version=weight_version,
-                personalize_score=personalize_score,
-                personalize_weight=personalize_weight,
                 question_score=question_score,
                 question_weight=question_weight,
                 order_score=order_score,
                 order_weight=order_weight,
                 tracking_score=tracking_score,
                 tracking_weight=tracking_weight,
+                percentage_score=percentage_score,
             ))
 
             return {
@@ -159,22 +163,19 @@ def register_product(blueprint: Blueprint):
     @blueprint.route('/product/visit', methods=['POST'], cors=True)
     def track_visit():
         products_model = MpcProduct()
-        # tracking_model = ProductsTrackingModel()
-
         scored_product = ScoredProduct()
 
         try:
             request_data = blueprint.current_request.json_body
             config_sku = request_data.get('config_sku')
             weight_version = request_data.get('version')
-            personalize_score = request_data.get('ps')
             question_score = request_data.get('qs')
             order_score = request_data.get('rs')
             tracking_score = request_data.get('ts')
-            personalize_weight = request_data.get('pw')
             question_weight = request_data.get('qw')
             order_weight = request_data.get('rw')
             tracking_weight = request_data.get('tw')
+            percentage_score = request_data.get('percentage_score', -1)
 
             if not isinstance(config_sku, str) or not config_sku.strip():
                 raise HttpIncorrectInputDataException('config_sku is incorrect')
@@ -185,6 +186,11 @@ def register_product(blueprint: Blueprint):
 
             session_id = blueprint.current_request.session_id
             user_id = blueprint.current_request.customer_id
+            if not user_id:
+                return {
+                    'Code': 'Failure',
+                    'Message': 'Not authenticated',
+                }
             user_tier_data = blueprint.current_request.current_user.profile.tier
 
             scored_product.track(VisitAction(
@@ -193,18 +199,16 @@ def register_product(blueprint: Blueprint):
                 user_id,
                 user_tier_data,
                 weight_version=weight_version,
-                personalize_score=personalize_score,
-                personalize_weight=personalize_weight,
                 question_score=question_score,
                 question_weight=question_weight,
                 order_score=order_score,
                 order_weight=order_weight,
                 tracking_score=tracking_score,
                 tracking_weight=tracking_weight,
+                percentage_score=percentage_score,
             ))
 
             # Send message to SQS so that recalculate scores
-            blueprint.current_request.current_user.send_delta_cache_update_message_to_sqs()
 
             return {
                 'Code': 'Success',

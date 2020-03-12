@@ -1,19 +1,12 @@
-from ...libs.models.ml.products import Product
-from ...libs.core.personalize import ProductSizePersonalize, ProductTypePersonalize
+from chalicelib.libs.core.chalice import MPCRequest
+from ...libs.models.ml.scored_products import ScoredProduct
 
 
 def register_sizes(blue_print):
-    # @blue_print.route('/sizes', cors=True)
-    # def sizes():
-    #     request = blue_print.current_request
-    #     response = ProductSizePersonalize.get_recommends(
-    #         customer_id=request.current_user.email, size=request.size)
-    #     return response
-
     @blue_print.route('/category_by_size', cors=True)
     def get_by_size():
-        request = blue_print.current_request
-        product_model = Product()
+        request: MPCRequest = blue_print.current_request
+        product_model = ScoredProduct()
 
         product_type_name = None
         product_size_name = None
@@ -22,12 +15,22 @@ def register_sizes(blue_print):
             product_type_name = request.current_user.profile.product_types[0]
 
         if product_type_name is None:
-            response = ProductTypePersonalize.get_recommends(
-                customer_id=request.current_user.email, size=1)
-            product_type_name = response[0]['name']
+            categories = product_model.get_categories_by_gender(
+                customer_id=request.current_user.id,
+                gender=request.gender, size=1)
+            if len(categories) > 0:
+                product_type_name = response[0]['product_type_name']
+            else:
+                return {
+                    'product_type': product_type_name,
+                    'product_size': None,
+                    'products': []
+                }
 
         if product_size_name is None:
-            candidates = product_model.get_sizes_by_product_type(product_type_name, request.gender)
+            candidates = product_model.get_sizes_by_product_type(
+                product_type_name, request.gender,
+                customer_id=request.current_user.id)
             if len(candidates) == 0:
                 return {
                     'product_type': product_type_name,
@@ -35,7 +38,7 @@ def register_sizes(blue_print):
                     'products': []
                 }
             else:
-                product_size_name = ProductSizePersonalize.get_top_size(candidates, customer_id=request.current_user.email, size=1)
+                product_size_name = candidates[0]
 
         products = product_model.get_by_size(
             product_size_name, product_type=product_type_name, gender=request.gender,
@@ -46,7 +49,3 @@ def register_sizes(blue_print):
             'product_size': product_size_name,
             'products': products
         }
-
-    @blue_print.route('/sizes/metrics')
-    def size_metrics(cors=True):
-        return ProductSizePersonalize.get_metrics()

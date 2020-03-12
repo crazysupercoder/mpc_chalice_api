@@ -1,7 +1,7 @@
 from chalice import Blueprint, NotFoundError
 from chalicelib.extensions import *
 from chalicelib.settings import settings
-from chalicelib.libs.purchase.core.returns import ReturnRequest
+from chalicelib.libs.purchase.core import ReturnRequest
 from chalicelib.libs.purchase.returns.storage import ReturnRequestStorageImplementation
 
 

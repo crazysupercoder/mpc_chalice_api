@@ -2,7 +2,7 @@ from chalicelib.extensions import *
 from chalicelib.constants import *
 from chalicelib.settings import settings
 from chalicelib.libs.core.logger import Logger
-from chalicelib.libs.core.chalice import MPCApi
+from chalicelib.libs.core.chalice import MPCApi, Rate
 from chalicelib.endpoints.brands.base import brands_blueprint
 from chalicelib.endpoints.banners.base import banners_blueprint
 from chalicelib.endpoints.accounts.base import accounts_blueprint
@@ -23,6 +23,7 @@ from chalicelib.endpoints.seen.base import seen_blueprint
 from chalicelib.endpoints.credit.base import credit_blueprint
 from chalicelib.endpoints.contactus.base import contactus_blueprint
 from chalicelib.libs.models.mpc.user import User
+from chalicelib.libs.models.mpc.Cms.user_states import CustomerStateModel
 # import processes
 from chalicelib.utils.sqs_handlers.base import *
 
@@ -48,17 +49,6 @@ app.register_blueprint(seen_blueprint, name_prefix='seen', url_prefix='/seen')
 app.register_blueprint(credit_blueprint, name_prefix='credit', url_prefix='/credit')
 app.register_blueprint(contactus_blueprint, name_prefix='contactus', url_prefix='/contactus')
 app.debug = settings.DEBUG
-
-
-@app.lambda_function(name='cognito-hook-%s' % settings.STAGE)
-def cognito_hook(event, context):
-    # TODO: Some logics that should be done when a customer was created here.
-    trigger_source = event['triggerSource']
-    if trigger_source == 'PostConfirmation_ConfirmSignUp':
-        email = event['request']['userAttributes']['email']
-        User.send_calculate_product_score_for_customers(emails=[email])
-        return {'status': True}
-    return {'status': False}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -98,8 +88,6 @@ def __handle_sqs_message(event):
             'chalicelib.utils.sqs_handlers.category.CategorySqsHandler': ('mpc_assets_category_delete',),
             'chalicelib.utils.sqs_handlers.brand.BrandSqsHandler': ('mpc_assets_brands', 'mpc_assets_brands_delete'),
             'chalicelib.utils.sqs_handlers.personalization.OrderHandler': ('personalization_order',),
-            'chalicelib.utils.sqs_handlers.delta.DeltaCacheSqsHandler': (
-                DELTA_CACHE_MESSAGE_TYPES.SECRET_KEY, DELTA_CACHE_MESSAGE_TYPES.CACHE_UPDATE),
 
             # @todo : merge into products queue handler ???
             'chalicelib.utils.sqs_handlers.product.EventProductSqsHandler': ('event_products',),
@@ -107,10 +95,11 @@ def __handle_sqs_message(event):
             'chalicelib.utils.sqs_handlers.product.SingleProductSqsHandler': ('single_product', 'image_update'),
 
             'chalicelib.utils.sqs_handlers.scored_product.ScoredProductSqsHandler': (
-                SCORED_PRODUCT_MESSAGE_TYPE.CALCULATE_FOR_A_CUSTOMER,),
+                SCORED_PRODUCT_MESSAGE_TYPE.CALCULATE_FOR_A_CUSTOMER, SCORED_PRODUCT_MESSAGE_TYPE.SECRET_KEY),
 
             'chalicelib.libs.purchase.order.sqs.OrderChangeSqsHandler': ('order_change',),
             'chalicelib.libs.purchase.order.sqs.OrderRefundSqsHandler': ('fixel_order_refund',),
+            'chalicelib.libs.purchase.order.sqs.OrderPaymentOhHoldHandler': ('fixel_order_on_hold_by_portal',),
             'chalicelib.libs.purchase.payment_methods.regular_eft.sqs.RegularEftPaymentSqsHandler': ('regular_eft_proof_check_result',),
             'chalicelib.libs.purchase.cancellations.sqs.CancelRequestPaidOrderAnswerSqsHandler': ('fixel_paid_order_cancellation_request_answer',),
             'chalicelib.libs.purchase.cancellations.sqs.CancelledOrderOnPortalSideSqsHandle': ('fixel_order_cancellation_by_portal',),
@@ -167,11 +156,41 @@ if not isinstance(queues, (tuple, list, set)) or sum([
         queues
     ))
 
-for queue in queues:
-    name = 'sqs_' + str(queue.get('name')).replace('.', '-')    # "." is not supported
-    @app.on_sqs_message(queue=queue.get('name'), batch_size=queue.get('batch_size'), name=name)
-    def register_listener(event):
-        __handle_sqs_message(event)
+
+# preventing sqs handler lambda function bounding
+# When you failed to deploy on your local,
+# please comment the `if` statement, and deploy and rollback to deploy again.
+if settings.STAGE in settings.STAGES_TO_BIND_LAMBDA_WITH_AWS_RESOURCES:
+    shorten_stage_str = settings.STAGE
+    if shorten_stage_str == 'production':
+        shorten_stage_str = 'prod'
+    @app.schedule(
+        Rate(settings.SCORE_CALCULATE_INTERVAL, Rate.MINUTES),
+        name='product-score-%s-schduler' % shorten_stage_str)
+    def scheduler(event):
+        emails = CustomerStateModel.get_customers_to_recalculate_scores()
+        User.send_calculate_product_score_for_customers(emails)
+
+    @app.lambda_function(name='cognito-hook-%s' % settings.STAGE)
+    def cognito_hook(event, context):
+        # TODO: Some logics that should be done when a customer was created here.
+        trigger_source = event['triggerSource']
+        if trigger_source == 'PostConfirmation_ConfirmSignUp':
+            email = event['request']['userAttributes']['email']
+            User.send_calculate_product_score_for_customers(emails=[email])
+            return {'status': True}
+        return {'status': False}
+
+    for queue in queues:
+        name = 'sqs_' + str(queue.get('name')).replace('.', '-')    # "." is not supported
+        @app.on_sqs_message(queue=queue.get('name'), batch_size=queue.get('batch_size'), name=name)
+        def register_listener(event):
+            __handle_sqs_message(event)
+else:
+    print("Skipping lambda functions additional resources such as\n"\
+        "- SQS queues\n"
+        "- Cognito Hook\n"\
+        "- Scheduler function")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
