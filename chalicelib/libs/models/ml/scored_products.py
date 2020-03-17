@@ -896,8 +896,8 @@ class ScoredProduct(object):
         product_type = item.get('product_size_attribute')
         sub_type = item.get('rs_product_sub_type')
         gender = item.get('gender')
-        product_type_model = ProductType()
-        item = product_type_model.get_root_node(product_type_name=product_type)
+        # product_type_model = ProductType()
+        # item = product_type_model.get_root_node(product_type_name=product_type)
 
         product_types = [
             item['product_type_name'] for item in self.get_categories_by_gender(
@@ -913,8 +913,16 @@ class ScoredProduct(object):
                         {
                             "range": {"sizes.qty": {"gt": 0}}
                         },
+                        # {
+                        #     "terms": {"product_size_attribute": product_types}
+                        # },
                         {
-                            "terms": {"product_size_attribute": product_types}
+                            "term": {"product_size_attribute": product_type}
+                        },
+                    ],
+                    "must_not": [
+                        {
+                            "term": {"rs_product_sub_type": sub_type}
                         }
                     ],
                 }

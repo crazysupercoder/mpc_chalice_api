@@ -2,12 +2,12 @@ from boto3.dynamodb.conditions import Key, Attr
 from typing import List, Tuple
 from chalicelib.settings import settings
 from ..base import DynamoModel, boto3
-from .preferences import Preference
+from .preferences import Preference, CommunicationPreferencesUpdateSqsSenderEvent
 from .Informations import InformationModel, Information, IdentificationNumber
 from .UserQuestions import UserQuestionModel, USER_QUESTION_TYPE
 from ...mpc.categories import Category, CategoryEntry
 from ...mpc.product_sizes import SizeOptions, Gender
-from chalicelib.libs.core.sqs_sender import SqsSenderEventInterface, SqsSenderImplementation
+from chalicelib.libs.core.sqs_sender import SqsSenderImplementation
 from chalicelib.libs.purchase.core import Id, CustomerTier
 from chalicelib.libs.purchase.customer.storage import CustomerStorageImplementation, CustomerTierStorageImplementation
 
@@ -16,29 +16,6 @@ user_question_model = UserQuestionModel()
 class PROFILE_SAVE_MODE:
     profile = 'p'
     session = 's'
-
-
-class CommunicationPreferencesUpdateSqsSenderEvent(SqsSenderEventInterface):
-    def __init__(self, email, alert_for_favorite_brand, daily_email, sms, weekly_email):
-        self.__email = email
-        self.__alert_for_favorite_brand = alert_for_favorite_brand
-        self.__daily_email = daily_email
-        self.__sms = sms
-        self.__weekly_email = weekly_email
-
-    @classmethod
-    def _get_event_type(cls) -> str:
-        return 'communication_preferences'
-
-    @property
-    def event_data(self) -> dict:
-        return {
-            'email': self.__email,
-            'alert_for_favorite_brand': self.__alert_for_favorite_brand,
-            'daily_email': self.__daily_email,
-            'sms': self.__sms,
-            'weekly_email': self.__weekly_email,
-        }
 
 
 class Profile(DynamoModel):
@@ -57,7 +34,7 @@ class Profile(DynamoModel):
     FAVORITE_CATEGORIES_SK = 'USER_CATEGORIES'
 
     __user_attributes: dict = None
-
+    __portal_questions = None
     def __init__(self, session_id, customer_id=None, email=None):
         super(Profile, self).__init__(self.TABLE_NAME)
         self.__is_anonymous = customer_id is None
@@ -65,6 +42,7 @@ class Profile(DynamoModel):
         self.__customer_id = customer_id
         self.__email = email
         self.__purchase_customer_tier_lazy_loading_cache = None
+        self.__portal_questions = user_question_model.get_all()
 
     @property
     def user_attributes(self) -> dict:
@@ -170,10 +148,9 @@ class Profile(DynamoModel):
         try:
             event = CommunicationPreferencesUpdateSqsSenderEvent(
                 self.email,
-                preference.alert_for_favorite_brand,
-                preference.daily_email,
-                preference.sms,
-                preference.weekly_email
+                preference.on_site_popups,
+                preference.emails,
+                preference.off_site_notifications,
             )
             SqsSenderImplementation().send(event)
         except Exception as e:
@@ -616,22 +593,19 @@ class Profile(DynamoModel):
             return False
 
     def add_name_question(self):
-        questions = user_question_model.get_all(convert = False)
-        for question in questions:
-            if question.attribute_value == 'name':
-                temp = user_question_model.get_item(question.id)
-                temp['number'] = '1'
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'name':
+                question['number'] = '1'
                 self.table.update_item(Key={
                     'pk': self.get_partition_key(),
                     'sk': self.QUESTIONS_SK_PREFIX + '1',
                 }, AttributeUpdates={
-                    'data': {'Value': temp}
+                    'data': {'Value': question}
                 })
                 return True
         return False
     
     def add_brand_category_size_questions(self):
-        questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
 
         names_shop4_answer = None
@@ -660,28 +634,25 @@ class Profile(DynamoModel):
 
         self.save_answer(names_shop4_number, names_shop4_answer)
 
-        for question in questions:
-            if question.attribute_value == 'brand':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'brand':
                 for old in old_questions:
                     if old['attribute']['value'] == 'brand' and name == old['name']:
                         raise Exception('The brand question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
-            elif question.attribute_value == 'category':
+                question['name'] = name
+                self.add_question(name, question)
+            elif question['attribute']['value'] == 'category':
                 for old in old_questions:
                     if old['attribute']['value'] == 'category' and name == old['name']:
                         raise Exception('The category question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
-            elif question.attribute_value == 'size':
+                question['name'] = name
+                self.add_question(name, question)
+            elif question['attribute']['value'] == 'size':
                 for old in old_questions:
                     if old['attribute']['value'] == 'size' and name == old['name']:
                         raise Exception('The size question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
+                question['name'] = name
+                self.add_question(name, question)
         if next_name is not None:    
             temp = {
                 'question': 'Do you want to set preferences for ' + next_name + '?',
@@ -712,78 +683,70 @@ class Profile(DynamoModel):
             self.add_question('', temp)       
 
     def add_size_question(self, name):
-        questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'size':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'size':
                 for old in old_questions:
                     if old['attribute']['value'] == 'size' and name == old['name']:
                         raise Exception('The size question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
+                question['name'] = name
+                self.add_question(name, question)
                 return
 
     def add_brand_question(self, name):
-        questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'brand':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'brand':
                 for old in old_questions:
                     if old['attribute']['value'] == 'brand' and name == old['name']:
                         raise Exception('The brand question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
+                question['name'] = name
+                self.add_question(name, question)
                 return
 
     def add_category_question(self, name):
         questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'category':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'category':
                 for old in old_questions:
                     if old['attribute']['value'] == 'category' and name == old['name']:
                         raise Exception('The category question of this name({}) were already made or answered.'.format(name))
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
+                question['name'] = name
+                self.add_question(name, question)
                 return    
     
     def add_shop4_question(self, name):
         questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'shop4':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'shop4':
                 for old in old_questions:
                     if old['attribute']['value'] == 'shop4':
                         return
-                temp = user_question_model.get_item(question.id)
-                self.add_question(name, temp)
+                self.add_question(name, question)
                 return  
 
     def add_language_question(self):
         questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'languages':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'languages':
                 for old in old_questions:
                     if old['attribute']['value'] == 'languages':
                         return
-                temp = user_question_model.get_item(question.id)
-                self.add_question('', temp)
+                self.add_question('', question)
                 return  
 
     def add_gender_question(self):
         questions = user_question_model.get_all(convert = False)
         old_questions = self.questions
-        for question in questions:
-            if question.attribute_value == 'gender':
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'gender':
                 for old in old_questions:
                     if old['attribute']['value'] == 'gender':
                         return
-                temp = user_question_model.get_item(question.id)
-                self.add_question('', temp)
+                self.add_question('', question)
                 return  
 
     def add_save_preferences_question(self):
@@ -878,20 +841,16 @@ class Profile(DynamoModel):
         self.add_question('', question)
 
     def add_main_category_brand_size_questions(self, name):
-        questions = user_question_model.get_all(convert = False)
-        for question in questions:
-            if question.attribute_value == 'category':
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)  
-            elif question.attribute_value == 'brand':
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
-            elif question.attribute_value == 'size':
-                temp = user_question_model.get_item(question.id)
-                temp['name'] = name
-                self.add_question(name, temp)
+        for question in self.__portal_questions:
+            if question['attribute']['value'] == 'category':
+                question['name'] = name
+                self.add_question(name, question)  
+            elif question['attribute']['value'] == 'brand':
+                question['name'] = name
+                self.add_question(name, question)
+            elif question['attribute']['value'] == 'size':
+                question['name'] = name
+                self.add_question(name, question)
     
     def update_question_name(self, name):
         old_questions = self.questions

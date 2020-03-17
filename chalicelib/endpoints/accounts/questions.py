@@ -99,17 +99,18 @@ def register_questions(blue_print):
                 number = answer.get('number')
                 old_answer = request.current_user.profile.get_question(number).get('answer')
                 if old_answer is not None:
-                    return {"status": False, "msg": "The questions was already answered."}
+                    return {"status": False, "msg": "The question#{} was already answered.".format(number)}
 
                 attribute_value = answer.get('attribute').get('value')
                 if attribute_value == 'name' and number == "1":
                     response = request.current_user.profile.save_answer(number, answer_body)
                     request.current_user.profile.add_language_question()
                     request.current_user.profile.add_gender_question()
-                # elif attribute_value == 'languages':
-                #     name = request.current_user.profile.get_question(1)['answer']
-                    request.current_user.profile.add_shop4_question(answer_body)
-                    request.current_user.profile.add_main_category_brand_size_questions(answer_body)
+                elif attribute_value == 'languages':
+                    request.current_user.profile.save_answer(number, answer_body)
+                    name = request.current_user.profile.get_question(1)['answer']
+                    request.current_user.profile.add_shop4_question(name)
+                    request.current_user.profile.add_main_category_brand_size_questions(name)
                 elif attribute_value == 'shop4':
                     response = request.current_user.profile.save_answer(number, answer_body)
                     if 'Just me' not in answer_body:
